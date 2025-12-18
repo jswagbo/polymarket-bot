@@ -24,21 +24,42 @@ The bot runs balanced straddles (buys both UP and DOWN) on Bitcoin markets. In e
 - 💾 **Trade history** - SQLite database tracks all trades and P&L
 - 🔒 **Password protected** - Simple auth for the dashboard
 
-## Quick Start
+## Quick Start - Deploy to Railway
 
-### Deploy to Railway
+### Step 1: Create a Railway Account
+1. Go to [railway.app](https://railway.app)
+2. Sign up with GitHub
 
-1. Click the button below to deploy:
+### Step 2: Deploy from GitHub
+1. Push this code to a new GitHub repository:
+   ```bash
+   # If you haven't already
+   git remote add origin https://github.com/YOUR_USERNAME/polymarket-bot.git
+   git push -u origin master
+   ```
+2. In Railway dashboard, click **"New Project"** → **"Deploy from GitHub repo"**
+3. Select your repository
 
-   [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template)
+### Step 3: Configure Environment Variables
+In Railway, go to your project → **Variables** tab and add:
 
-2. Set your environment variables:
-   - `PRIVATE_KEY` - Your Polygon wallet private key
-   - `DASHBOARD_PASSWORD` - Password for the dashboard
-   - `BET_SIZE` - Amount per straddle (default: 10)
-   - `BOT_ENABLED` - Start with bot enabled (default: false)
+| Variable | Value |
+|----------|-------|
+| `PRIVATE_KEY` | Your Polygon wallet private key (from MetaMask) |
+| `DASHBOARD_PASSWORD` | A secure password for the dashboard |
+| `BET_SIZE` | Amount per straddle, e.g., `10` |
+| `BOT_ENABLED` | `false` (enable via dashboard later) |
 
-3. Your bot will be live at the Railway-provided URL!
+### Step 4: Get Your URL
+1. Go to **Settings** → **Networking**
+2. Click **"Generate Domain"**
+3. Your bot is now live at `https://your-app.up.railway.app`
+
+### Step 5: Start Trading
+1. Open your Railway URL in a browser
+2. Enter your dashboard password
+3. Fund your Polymarket wallet with USDC
+4. Set your bet size and toggle the bot ON
 
 ### Run Locally
 

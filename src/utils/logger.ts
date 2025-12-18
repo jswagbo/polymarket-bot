@@ -23,7 +23,11 @@ class Logger {
     
     let output = `${prefix} ${message}`;
     if (data !== undefined) {
-      output += ` ${JSON.stringify(data, null, 2)}`;
+      if (data instanceof Error) {
+        output += ` ${data.message}\n${data.stack}`;
+      } else {
+        output += ` ${JSON.stringify(data, null, 2)}`;
+      }
     }
     return output;
   }

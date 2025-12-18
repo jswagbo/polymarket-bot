@@ -15,11 +15,10 @@ export interface Config {
 }
 
 function getEnvVar(name: string, defaultValue?: string): string {
-  const value = process.env[name] || defaultValue;
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
+  const value = process.env[name];
+  if (value !== undefined) return value;
+  if (defaultValue !== undefined) return defaultValue;
+  throw new Error(`Missing required environment variable: ${name}`);
 }
 
 function getEnvNumber(name: string, defaultValue: number): number {
