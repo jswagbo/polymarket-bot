@@ -8,8 +8,14 @@ const logger = createLogger('PolymarketClient');
 const CLOB_API_URL = 'https://clob.polymarket.com';
 const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
 
-// Polygon contract addresses
-const POLYGON_RPC = 'https://polygon-rpc.com';
+// Polygon contract addresses - using reliable RPC endpoints
+const POLYGON_RPCS = [
+  'https://polygon.llamarpc.com',
+  'https://polygon-bor-rpc.publicnode.com',
+  'https://polygon.drpc.org',
+  'https://polygon-rpc.com',
+];
+const POLYGON_RPC = POLYGON_RPCS[0]; // Use LlamaNodes as primary
 const USDC_E_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e (bridged) on Polygon
 const USDC_NATIVE_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Native USDC on Polygon
 const CTF_EXCHANGE = '0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E'; // Polymarket CTF Exchange
@@ -483,11 +489,21 @@ export class PolymarketClient {
       
       if (ctfAllowance.lt(ethers.utils.parseUnits('1000000', 6))) {
         logger.info(`Approving ${usdcType} for CTF Exchange...`);
-        const tx1 = await usdc.approve(CTF_EXCHANGE, maxApproval, { gasLimit: 100000 });
+        
+        // Get current gas price and add 20% buffer
+        const gasPrice = await provider.getGasPrice();
+        const boostedGasPrice = gasPrice.mul(120).div(100);
+        logger.info(`Gas price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} gwei (using ${ethers.utils.formatUnits(boostedGasPrice, 'gwei')} gwei)`);
+        
+        const tx1 = await usdc.approve(CTF_EXCHANGE, maxApproval, { 
+          gasLimit: 100000,
+          gasPrice: boostedGasPrice 
+        });
         logger.info(`Approval tx sent: ${tx1.hash}`);
-        logger.info('Waiting for confirmation...');
-        await tx1.wait();
-        logger.info('✅ CTF Exchange approved!');
+        logger.info(`View on Polygonscan: https://polygonscan.com/tx/${tx1.hash}`);
+        logger.info('Waiting for confirmation (this may take 10-30 seconds)...');
+        const receipt1 = await tx1.wait();
+        logger.info(`✅ CTF Exchange approved! Block: ${receipt1.blockNumber}, Gas used: ${receipt1.gasUsed.toString()}`);
       } else {
         logger.info('✅ CTF Exchange already approved');
       }
@@ -498,11 +514,19 @@ export class PolymarketClient {
       
       if (negRiskAllowance.lt(ethers.utils.parseUnits('1000000', 6))) {
         logger.info(`Approving ${usdcType} for Neg Risk CTF Exchange...`);
-        const tx2 = await usdc.approve(NEG_RISK_CTF_EXCHANGE, maxApproval, { gasLimit: 100000 });
+        
+        const gasPrice = await provider.getGasPrice();
+        const boostedGasPrice = gasPrice.mul(120).div(100);
+        
+        const tx2 = await usdc.approve(NEG_RISK_CTF_EXCHANGE, maxApproval, { 
+          gasLimit: 100000,
+          gasPrice: boostedGasPrice 
+        });
         logger.info(`Approval tx sent: ${tx2.hash}`);
+        logger.info(`View on Polygonscan: https://polygonscan.com/tx/${tx2.hash}`);
         logger.info('Waiting for confirmation...');
-        await tx2.wait();
-        logger.info('✅ Neg Risk CTF Exchange approved!');
+        const receipt2 = await tx2.wait();
+        logger.info(`✅ Neg Risk CTF Exchange approved! Block: ${receipt2.blockNumber}`);
       } else {
         logger.info('✅ Neg Risk CTF Exchange already approved');
       }
