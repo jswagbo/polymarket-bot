@@ -22,8 +22,16 @@ export function createServer(
   app.use(cors());
   app.use(express.json());
 
-  // Serve static files (dashboard)
-  app.use(express.static(path.join(__dirname, '../../public')));
+  // Serve static files (dashboard) - no cache for development
+  app.use(express.static(path.join(__dirname, '../../public'), {
+    etag: false,
+    maxAge: 0,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }));
 
   // Simple auth middleware for API routes
   const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
