@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polymarket Straddle Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #16161f;
+      --bg-hover: #1e1e2a;
+      --border: #2a2a3a;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --text-muted: #555566;
+      --accent-primary: #00d4aa;
+      --accent-secondary: #00a888;
+      --accent-glow: rgba(0, 212, 170, 0.15);
+      --danger: #ff4466;
+      --danger-glow: rgba(255, 68, 102, 0.15);
+      --warning: #ffaa00;
+      --success: #00dd88;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(ellipse at 20% 0%, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(0, 168, 136, 0.05) 0%, transparent 50%);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    .logo-text h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Auth Form */
+    .auth-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-input {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      width: 200px;
+      transition: border-color 0.2s;
+    }
+
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    .auth-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-badge.active {
+      background: rgba(0, 221, 136, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(0, 221, 136, 0.3);
+    }
+
+    .status-badge.inactive {
+      background: rgba(255, 68, 102, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(255, 68, 102, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      .grid-2, .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.positive { color: var(--success); }
+    .stat-value.negative { color: var(--danger); }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .stat-icon {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      font-size: 2rem;
+      opacity: 0.1;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .control-input {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      width: 140px;
+      transition: all 0.2s;
+    }
+
+    .control-input:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: var(--bg-primary);
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-hover);
+      border-color: var(--text-muted);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #cc3355);
+      color: white;
+      box-shadow: 0 4px 15px var(--danger-glow);
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px var(--danger-glow);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toggle {
+      position: relative;
+      width: 60px;
+      height: 32px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .toggle.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .toggle.active::after {
+      left: calc(100% - 27px);
+    }
+
+    .toggle-label {
+      font-weight: 500;
+    }
+
+    /* Trades Table */
+    .trades-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .trades-table th,
+    .trades-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .trades-table th {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .trades-table td {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+    }
+
+    .trades-table tr:hover td {
+      background: var(--bg-hover);
+    }
+
+    .trade-market {
+      font-family: 'Outfit', sans-serif;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .trade-status {
+      display: inline-flex;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .trade-status.open { background: rgba(0, 212, 170, 0.1); color: var(--accent-primary); }
+    .trade-status.pending { background: rgba(255, 170, 0, 0.1); color: var(--warning); }
+    .trade-status.resolved { background: rgba(0, 221, 136, 0.1); color: var(--success); }
+    .trade-status.failed { background: rgba(255, 68, 102, 0.1); color: var(--danger); }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--danger); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">₿</div>
+        <div class="logo-text">
+          <h1>Straddle Bot</h1>
+          <span>Polymarket Automation</span>
+        </div>
+      </div>
+      <div class="auth-section">
+        <input type="password" id="passwordInput" class="auth-input" placeholder="Enter password...">
+        <div id="botStatus" class="status-badge inactive">
+          <span class="status-dot"></span>
+          <span>Disconnected</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-4" style="margin-bottom: 24px;">
+      <div class="card stat-card">
+        <span class="stat-icon">📈</span>
+        <div class="stat-value" id="totalPnL">$0.00</div>
+        <div class="stat-label">Total P&L</div>
+      </div>
+      <div class="card stat-card">
+        <span class="stat-icon">🎯</span>
+        <div class="stat-value" id="totalTrades">0</div>
+        <div class="stat-label">Total Trades</div>
+      </div>
+      <div class="card stat-card">
+        <span class="stat-icon">⏳</span>
+        <div class="stat-value" id="activePositions">0</div>
+        <div class="stat-label">Active Positions</div>
+      </div>
+      <div class="card stat-card">
+        <span class="stat-icon">⏱️</span>
+        <div class="stat-value" id="lastScan">--</div>
+        <div class="stat-label">Last Scan</div>
+      </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">Bot Controls</h2>
+      </div>
+      <div class="control-panel">
+        <div class="toggle-container">
+          <div id="botToggle" class="toggle"></div>
+          <span class="toggle-label" id="toggleLabel">Bot Disabled</span>
+        </div>
+        <div class="control-group">
+          <label class="control-label">Bet Size ($)</label>
+          <input type="number" id="betSizeInput" class="control-input" min="1" step="1" value="10">
+        </div>
+        <div class="control-group">
+          <label class="control-label">Max Combined</label>
+          <input type="number" id="maxCostInput" class="control-input" min="0.9" max="1.2" step="0.01" value="1.05">
+        </div>
+        <button class="btn btn-secondary" id="saveConfigBtn">💾 Save Config</button>
+        <button class="btn btn-primary" id="forceScanBtn">🔍 Force Scan</button>
+        <button class="btn btn-danger" id="emergencyStopBtn">⛔ Emergency Stop</button>
+      </div>
+    </div>
+
+    <!-- Trades Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Recent Trades</h2>
+        <button class="btn btn-secondary" id="refreshTradesBtn">🔄 Refresh</button>
+      </div>
+      <div id="tradesContainer">
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <p>No trades yet. The bot will automatically find and execute straddle opportunities.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    // State
+    let password = localStorage.getItem('botPassword') || '';
+    let isConnected = false;
+
+    // Elements
+    const passwordInput = document.getElementById('passwordInput');
+    const botStatus = document.getElementById('botStatus');
+    const botToggle = document.getElementById('botToggle');
+    const toggleLabel = document.getElementById('toggleLabel');
+    const betSizeInput = document.getElementById('betSizeInput');
+    const maxCostInput = document.getElementById('maxCostInput');
+    const toastContainer = document.getElementById('toastContainer');
+
+    // Initialize
+    passwordInput.value = password;
+    if (password) fetchStats();
+
+    // Event Listeners
+    passwordInput.addEventListener('input', (e) => {
+      password = e.target.value;
+      localStorage.setItem('botPassword', password);
+      fetchStats();
+    });
+
+    botToggle.addEventListener('click', toggleBot);
+    document.getElementById('saveConfigBtn').addEventListener('click', saveConfig);
+    document.getElementById('forceScanBtn').addEventListener('click', forceScan);
+    document.getElementById('emergencyStopBtn').addEventListener('click', emergencyStop);
+    document.getElementById('refreshTradesBtn').addEventListener('click', () => fetchStats());
+
+    // API Functions
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      try {
+        const options = {
+          method,
+          headers: {
+            'Authorization': `Bearer ${password}`,
+            'Content-Type': 'application/json',
+          },
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        const response = await fetch(`/api${endpoint}`, options);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'API Error');
+        }
+
+        isConnected = true;
+        updateConnectionStatus(true);
+        return data;
+      } catch (error) {
+        if (error.message === 'Unauthorized') {
+          isConnected = false;
+          updateConnectionStatus(false);
+        }
+        throw error;
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const { data } = await apiCall('/stats');
+        updateDashboard(data);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      }
+    }
+
+    async function toggleBot() {
+      try {
+        const { data } = await apiCall('/bot/toggle', 'POST');
+        updateBotState(data.enabled);
+        showToast(data.enabled ? 'Bot enabled' : 'Bot disabled', 'success');
+      } catch (error) {
+        showToast('Failed to toggle bot', 'error');
+      }
+    }
+
+    async function saveConfig() {
+      try {
+        await apiCall('/config', 'POST', {
+          betSize: parseFloat(betSizeInput.value),
+          maxCombinedCost: parseFloat(maxCostInput.value),
+        });
+        showToast('Configuration saved', 'success');
+      } catch (error) {
+        showToast('Failed to save config', 'error');
+      }
+    }
+
+    async function forceScan() {
+      try {
+        const btn = document.getElementById('forceScanBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Scanning...';
+        
+        const { data } = await apiCall('/bot/scan', 'POST');
+        showToast(`Scan complete: ${data.markets} markets, ${data.opportunities} opportunities, ${data.trades} trades`, 'success');
+        fetchStats();
+      } catch (error) {
+        showToast('Scan failed: ' + error.message, 'error');
+      } finally {
+        const btn = document.getElementById('forceScanBtn');
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Force Scan';
+      }
+    }
+
+    async function emergencyStop() {
+      if (!confirm('Are you sure you want to emergency stop the bot?')) return;
+      
+      try {
+        await apiCall('/bot/stop', 'POST');
+        showToast('Bot stopped', 'success');
+        fetchStats();
+      } catch (error) {
+        showToast('Failed to stop bot', 'error');
+      }
+    }
+
+    // UI Updates
+    function updateConnectionStatus(connected) {
+      botStatus.className = `status-badge ${connected ? 'active' : 'inactive'}`;
+      botStatus.innerHTML = `<span class="status-dot"></span><span>${connected ? 'Connected' : 'Disconnected'}</span>`;
+    }
+
+    function updateBotState(enabled) {
+      botToggle.className = `toggle ${enabled ? 'active' : ''}`;
+      toggleLabel.textContent = enabled ? 'Bot Enabled' : 'Bot Disabled';
+    }
+
+    function updateDashboard(data) {
+      // Stats
+      const pnl = data.status.totalPnL || 0;
+      const pnlEl = document.getElementById('totalPnL');
+      pnlEl.textContent = `$${pnl.toFixed(2)}`;
+      pnlEl.className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+      
+      document.getElementById('totalTrades').textContent = data.status.totalTrades;
+      document.getElementById('activePositions').textContent = data.status.activePositions;
+      
+      const lastScan = data.status.lastScan;
+      document.getElementById('lastScan').textContent = lastScan ? formatTime(lastScan) : '--';
+
+      // Config
+      betSizeInput.value = data.config.betSize;
+      maxCostInput.value = data.config.maxCombinedCost;
+      updateBotState(data.config.botEnabled);
+
+      // Trades
+      renderTrades(data.recentTrades);
+    }
+
+    function renderTrades(trades) {
+      const container = document.getElementById('tradesContainer');
+      
+      if (!trades || trades.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <p>No trades yet. The bot will automatically find and execute straddle opportunities.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="trades-table">
+          <thead>
+            <tr>
+              <th>Market</th>
+              <th>Up Price</th>
+              <th>Down Price</th>
+              <th>Cost</th>
+              <th>Status</th>
+              <th>P&L</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${trades.map(t => `
+              <tr>
+                <td class="trade-market" title="${t.market_question}">${t.market_question}</td>
+                <td>$${t.up_price.toFixed(3)}</td>
+                <td>$${t.down_price.toFixed(3)}</td>
+                <td>$${t.combined_cost.toFixed(3)}</td>
+                <td><span class="trade-status ${t.status}">${t.status}</span></td>
+                <td>${t.pnl !== null ? `$${t.pnl.toFixed(2)}` : '--'}</td>
+                <td>${formatTime(t.created_at)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+      
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return date.toLocaleDateString();
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span>${message}`;
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      if (isConnected) fetchStats();
+    }, 30000);
+  </script>
+</body>
+</html>
+
