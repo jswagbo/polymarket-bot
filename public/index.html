@@ -138,6 +138,18 @@
       border: 1px solid rgba(255, 68, 102, 0.3);
     }
 
+    .status-badge.warning {
+      background: rgba(255, 170, 0, 0.1);
+      color: var(--warning);
+      border: 1px solid rgba(255, 170, 0, 0.3);
+    }
+
+    .status-badge.trading {
+      background: rgba(0, 212, 170, 0.1);
+      color: var(--accent-primary);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+    }
+
     .status-dot {
       width: 8px;
       height: 8px;
@@ -598,6 +610,9 @@
       </div>
       <div class="auth-section">
         <input type="password" id="passwordInput" class="auth-input" placeholder="Enter password...">
+        <div id="tradingMode" class="status-badge inactive" style="margin-right: 8px;">
+          <span>--</span>
+        </div>
         <div id="botStatus" class="status-badge inactive">
           <span class="status-dot"></span>
           <span>Disconnected</span>
@@ -852,8 +867,31 @@
       maxCostInput.value = data.config.maxCombinedCost;
       updateBotState(data.config.botEnabled);
 
+      // Trading mode indicator
+      updateTradingMode(data.status.isReadOnly, data.status.walletAddress, data.status.initError);
+
       // Trades
       renderTrades(data.recentTrades);
+    }
+
+    function updateTradingMode(isReadOnly, walletAddress, initError) {
+      const tradingMode = document.getElementById('tradingMode');
+      
+      if (initError) {
+        tradingMode.className = 'status-badge inactive';
+        tradingMode.innerHTML = '❌ Init Error';
+        tradingMode.title = `Initialization failed: ${initError}`;
+        console.error('Client init error:', initError);
+      } else if (isReadOnly) {
+        tradingMode.className = 'status-badge warning';
+        tradingMode.innerHTML = '⚠️ Read-Only';
+        tradingMode.title = 'No private key configured - cannot execute trades';
+      } else {
+        tradingMode.className = 'status-badge trading';
+        const shortAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
+        tradingMode.innerHTML = `💰 Trading ${shortAddr}`;
+        tradingMode.title = walletAddress ? `Wallet: ${walletAddress}` : 'Trading enabled';
+      }
     }
 
     function renderLiveMarkets(markets) {

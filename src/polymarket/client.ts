@@ -32,12 +32,20 @@ export class PolymarketClient {
 
   constructor(private config: PolymarketClientConfig) {}
 
+  private initError: string | null = null;
+
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
       // Check if private key is provided
-      if (!this.config.privateKey || this.config.privateKey === 'your_private_key_here') {
+      const hasKey = this.config.privateKey && 
+                     this.config.privateKey.length > 0 && 
+                     this.config.privateKey !== 'your_private_key_here';
+      
+      logger.info(`Private key status: ${hasKey ? 'PROVIDED (' + this.config.privateKey.length + ' chars)' : 'NOT PROVIDED'}`);
+      
+      if (!hasKey) {
         logger.warn('No private key configured - running in read-only mode');
         this.client = new ClobClient(CLOB_API_URL, 137);
         this.isInitialized = true;
@@ -45,10 +53,12 @@ export class PolymarketClient {
       }
 
       // Create wallet from private key
+      logger.info('Creating wallet from private key...');
       this.wallet = new ethers.Wallet(this.config.privateKey);
       logger.info(`Wallet address: ${this.wallet.address}`);
 
       // Initialize CLOB client with wallet for trading
+      logger.info('Initializing CLOB client...');
       this.client = new ClobClient(
         CLOB_API_URL,
         137, // Polygon mainnet
@@ -56,6 +66,7 @@ export class PolymarketClient {
       );
 
       // Derive API credentials
+      logger.info('Deriving API credentials...');
       const rawCreds = await this.client.deriveApiKey();
       this.apiCreds = rawCreds;
       logger.info('API credentials derived successfully');
@@ -69,11 +80,22 @@ export class PolymarketClient {
       );
 
       this.isInitialized = true;
-      logger.info('Polymarket client initialized successfully');
+      this.initError = null;
+      logger.info('Polymarket client initialized successfully - TRADING MODE ENABLED');
     } catch (error) {
-      logger.error('Failed to initialize Polymarket client', error);
-      throw error;
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.initError = errorMsg;
+      logger.error('Failed to initialize Polymarket client:', errorMsg);
+      
+      // Fall back to read-only mode on error
+      logger.warn('Falling back to read-only mode due to initialization error');
+      this.client = new ClobClient(CLOB_API_URL, 137);
+      this.isInitialized = true;
     }
+  }
+
+  getInitError(): string | null {
+    return this.initError;
   }
 
   getClient(): ClobClient {

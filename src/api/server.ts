@@ -72,7 +72,13 @@ export function createServer(
       const recentTrades = db.getRecentTrades(20);
       const openTrades = db.getOpenTrades();
 
-      const stats: DashboardStats = {
+      // Get client info from the scheduler's client
+      const client = (scheduler as any).client as import('../polymarket/client').PolymarketClient;
+      const isReadOnly = client?.isReadOnly() ?? true;
+      const walletAddress = client?.getWalletAddress() ?? null;
+      const initError = client?.getInitError() ?? null;
+
+      const stats = {
         status: {
           enabled: runtimeConfig.botEnabled,
           lastScan: schedulerStatus.lastScanTime,
@@ -80,13 +86,16 @@ export function createServer(
           totalTrades: tradeStats.total,
           totalPnL: tradeStats.totalPnL,
           uptime: Date.now() - startTime,
+          isReadOnly,
+          walletAddress,
+          initError,
         },
         config: runtimeConfig.toJSON(),
         recentTrades,
         activePositions: [], // Would need market prices to calculate positions
       };
 
-      res.json({ success: true, data: stats } as ApiResponse<DashboardStats>);
+      res.json({ success: true, data: stats });
     } catch (error) {
       logger.error('Failed to get stats', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
