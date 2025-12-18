@@ -7,12 +7,20 @@ const logger = createLogger('StraddleCalculator');
 
 /**
  * Based on the user's research:
- * - Cheap options (<50¢) hit WAY less than implied
- * - Expensive options (>50¢) hit WAY more than implied
+ * - Cheap options (<40¢) hit WAY less than implied
+ * - Expensive options (>60¢) hit WAY more than implied
+ * 
+ * Strategy thresholds:
+ * - CHEAP: < 40¢ (wins way less than implied ~10% vs ~35%)
+ * - EXPENSIVE: > 60¢ (wins way more than implied ~93% vs ~65%)
  * 
  * The strategy: Buy balanced straddles where one leg is cheap and one is expensive.
  * The expensive leg overperforms, creating net positive expectation.
  */
+
+// Strategy thresholds
+const CHEAP_THRESHOLD = 0.40;     // Below 40¢ = cheap
+const EXPENSIVE_THRESHOLD = 0.60; // Above 60¢ = expensive
 
 export interface StraddleConfig {
   betSize: number;           // Total amount to bet (split between up/down)
@@ -167,20 +175,30 @@ export class StraddleCalculator {
 
   /**
    * Determine if a straddle is viable based on the strategy
+   * 
+   * Requirements:
+   * - One leg must be CHEAP (< 40¢)
+   * - One leg must be EXPENSIVE (> 60¢)
+   * - Combined cost must be within max allowed
    */
   private isViableStraddle(upPrice: number, downPrice: number, combinedCost: number): boolean {
-    // The strategy works best when:
-    // 1. One leg is cheap (<50¢) and one is expensive (>50¢)
-    // 2. Combined cost is reasonable (ideally < $1.00, max $1.05)
+    // Check if one leg is cheap (< 40¢)
+    const hasCheapLeg = upPrice < CHEAP_THRESHOLD || downPrice < CHEAP_THRESHOLD;
     
-    const hasCheapLeg = upPrice < 0.50 || downPrice < 0.50;
-    const hasExpensiveLeg = upPrice >= 0.50 || downPrice >= 0.50;
+    // Check if one leg is expensive (> 60¢)
+    const hasExpensiveLeg = upPrice > EXPENSIVE_THRESHOLD || downPrice > EXPENSIVE_THRESHOLD;
+    
+    // Combined cost must be reasonable
     const costOk = combinedCost <= this.config.maxCombinedCost;
     
-    // Both legs shouldn't be on the same side of 50¢
-    const isBalanced = hasCheapLeg && hasExpensiveLeg;
+    // Need BOTH a cheap leg AND an expensive leg for the strategy to work
+    const hasRequiredSkew = hasCheapLeg && hasExpensiveLeg;
     
-    return isBalanced && costOk;
+    if (!hasRequiredSkew && (upPrice > 0 && downPrice > 0)) {
+      logger.debug(`Market skipped - no sufficient skew: up=${(upPrice*100).toFixed(1)}¢, down=${(downPrice*100).toFixed(1)}¢ (need <${CHEAP_THRESHOLD*100}¢ AND >${EXPENSIVE_THRESHOLD*100}¢)`);
+    }
+    
+    return hasRequiredSkew && costOk;
   }
 
   /**
