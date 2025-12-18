@@ -144,27 +144,21 @@ export class MarketScanner {
   }
 
   /**
-   * Check if an outcome represents "up" (price going up, above, yes to higher)
+   * Check if an outcome represents "yes" side (betting it will happen)
    */
   private isUpOutcome(outcome: string): boolean {
-    const upKeywords = [
-      'yes', 'up', 'above', 'higher', 'over', 'bull', 
-      'long', 'rise', 'increase', 'gain'
-    ];
-    const text = outcome.toLowerCase();
-    return upKeywords.some(k => text.includes(k));
+    const text = outcome.toLowerCase().trim();
+    // Yes is the "up" side - betting the event happens
+    return text === 'yes' || text.includes('yes');
   }
 
   /**
-   * Check if an outcome represents "down" (price going down, below, no to higher)
+   * Check if an outcome represents "no" side (betting it won't happen)
    */
   private isDownOutcome(outcome: string): boolean {
-    const downKeywords = [
-      'no', 'down', 'below', 'lower', 'under', 'bear',
-      'short', 'fall', 'decrease', 'loss', 'drop'
-    ];
-    const text = outcome.toLowerCase();
-    return downKeywords.some(k => text.includes(k));
+    const text = outcome.toLowerCase().trim();
+    // No is the "down" side - betting the event doesn't happen
+    return text === 'no' || text.includes('no');
   }
 
   /**

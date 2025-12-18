@@ -82,7 +82,7 @@ export class PolymarketClient {
 
   async getMarkets(): Promise<any[]> {
     try {
-      const response = await fetch(`${GAMMA_API_URL}/markets?closed=false&active=true`);
+      const response = await fetch(`${GAMMA_API_URL}/markets?closed=false&limit=500`);
       if (!response.ok) {
         throw new Error(`Failed to fetch markets: ${response.statusText}`);
       }

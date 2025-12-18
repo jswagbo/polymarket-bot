@@ -124,14 +124,7 @@ export const BITCOIN_MARKET_FILTER: BitcoinMarketFilter = {
   keywords: [
     'bitcoin',
     'btc',
-    'bitcoin price',
-    'btc price',
   ],
-  excludeKeywords: [
-    'ethereum',
-    'eth',
-    'solana',
-    'sol',
-  ],
+  excludeKeywords: [],
 };
 
