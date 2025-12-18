@@ -79,6 +79,17 @@ export class PolymarketClient {
         this.apiCreds
       );
 
+      // Set up allowances for trading (approve USDC spending)
+      logger.info('Setting up token allowances for CLOB trading...');
+      try {
+        // This approves the USDC and conditional tokens for the CLOB exchange
+        await this.client.setAllowances();
+        logger.info('Token allowances set successfully');
+      } catch (allowanceError: any) {
+        logger.warn(`Allowance setup warning: ${allowanceError.message || allowanceError}`);
+        // Continue anyway - might already be approved
+      }
+
       this.isInitialized = true;
       this.initError = null;
       logger.info('Polymarket client initialized successfully - TRADING MODE ENABLED');

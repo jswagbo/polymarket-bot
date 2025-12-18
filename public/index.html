@@ -664,6 +664,7 @@
         </div>
         <button class="btn btn-secondary" id="saveConfigBtn">💾 Save Config</button>
         <button class="btn btn-primary" id="forceScanBtn">🔍 Force Scan</button>
+        <button class="btn btn-secondary" id="approveBtn">✅ Approve USDC</button>
         <button class="btn btn-secondary" id="resetBtn">🔄 Reset History</button>
         <button class="btn btn-danger" id="emergencyStopBtn">⛔ Emergency Stop</button>
       </div>
@@ -731,6 +732,7 @@
     document.getElementById('forceScanBtn').addEventListener('click', forceScan);
     document.getElementById('emergencyStopBtn').addEventListener('click', emergencyStop);
     document.getElementById('resetBtn').addEventListener('click', resetBot);
+    document.getElementById('approveBtn').addEventListener('click', approveUsdc);
     document.getElementById('refreshTradesBtn').addEventListener('click', () => fetchStats());
     document.getElementById('refreshMarketsBtn').addEventListener('click', fetchLiveMarkets);
 
@@ -849,6 +851,23 @@
         fetchStats();
       } catch (error) {
         showToast('Failed to reset: ' + error.message, 'error');
+      }
+    }
+
+    async function approveUsdc() {
+      try {
+        const btn = document.getElementById('approveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Approving...';
+        
+        await apiCall('/bot/approve', 'POST');
+        showToast('USDC approved for Polymarket CLOB trading!', 'success');
+      } catch (error) {
+        showToast('Failed to approve: ' + error.message, 'error');
+      } finally {
+        const btn = document.getElementById('approveBtn');
+        btn.disabled = false;
+        btn.innerHTML = '✅ Approve USDC';
       }
     }
 

@@ -176,6 +176,28 @@ export function createServer(
     }
   });
 
+  // Setup allowances (approve USDC for trading)
+  app.post('/api/bot/approve', async (req: Request, res: Response) => {
+    try {
+      const client = (scheduler as any).client as import('../polymarket/client').PolymarketClient;
+      
+      if (client.isReadOnly()) {
+        res.status(400).json({ success: false, error: 'Cannot approve in read-only mode' });
+        return;
+      }
+
+      logger.info('Manually triggering allowance setup...');
+      const clobClient = client.getClient();
+      await clobClient.setAllowances();
+      
+      logger.info('Allowances approved successfully');
+      res.json({ success: true, message: 'USDC spending approved for Polymarket CLOB' });
+    } catch (error: any) {
+      logger.error('Failed to set allowances', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to approve' });
+    }
+  });
+
   // Get trades
   app.get('/api/trades', (req: Request, res: Response) => {
     try {
