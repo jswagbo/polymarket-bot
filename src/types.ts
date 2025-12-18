@@ -130,3 +130,58 @@ export const BITCOIN_MARKET_FILTER: BitcoinMarketFilter = {
   excludeKeywords: [],
 };
 
+// Gamma API Types for Hourly Markets
+export interface GammaSeries {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  recurrence: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  active: boolean;
+  closed: boolean;
+  events: GammaEvent[];
+}
+
+export interface GammaEvent {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  description: string;
+  endDate: string;
+  active: boolean;
+  closed: boolean;
+  volume: number;
+  markets?: GammaMarket[];
+}
+
+export interface GammaMarket {
+  id: string;
+  question: string;
+  conditionId: string;
+  slug: string;
+  outcomes: string;           // JSON string: '["Up", "Down"]'
+  outcomePrices: string;      // JSON string: '["0.5", "0.5"]'
+  clobTokenIds: string;       // JSON string: '["token1", "token2"]'
+  volume: string;
+  active: boolean;
+  closed: boolean;
+}
+
+export interface HourlyMarket {
+  eventId: string;
+  title: string;
+  slug: string;
+  endDate: Date;
+  conditionId: string;
+  upToken: {
+    tokenId: string;
+    price: number;
+  };
+  downToken: {
+    tokenId: string;
+    price: number;
+  };
+  hoursUntilClose: number;
+}
+

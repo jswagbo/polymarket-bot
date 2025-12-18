@@ -4,9 +4,20 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger('PolymarketClient');
 
-// Polymarket CLOB API endpoints
+// Polymarket API endpoints
 const CLOB_API_URL = 'https://clob.polymarket.com';
 const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
+
+// Series IDs for recurring markets
+export const SERIES_IDS = {
+  BTC_HOURLY: '10114',      // BTC Up or Down Hourly
+  XRP_HOURLY: '10123',      // XRP Up or Down Hourly
+  TSLA_DAILY: '10375',      // TSLA Daily Up Down
+  AMZN_DAILY: '10378',      // AMZN Daily Up Down
+  RUSSELL_DAILY: '10388',   // Russell 2000 Daily Up or Down
+  EUR_USD_DAILY: '10405',   // EUR/USD Daily Up or Down
+  BRENT_DAILY: '10416',     // Brent Crude Oil Daily Up or Down
+};
 
 export interface PolymarketClientConfig {
   privateKey: string;
@@ -108,6 +119,88 @@ export class PolymarketClient {
     }
   }
 
+  /**
+   * Get a series by ID with all its events
+   */
+  async getSeries(seriesId: string): Promise<any> {
+    try {
+      logger.info(`Fetching series ${seriesId}...`);
+      const response = await fetch(`${GAMMA_API_URL}/series/${seriesId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch series: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error(`Failed to fetch series ${seriesId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get event details by ID (includes markets with token IDs)
+   */
+  async getEvent(eventId: string): Promise<any> {
+    try {
+      const response = await fetch(`${GAMMA_API_URL}/events/${eventId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch event: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error(`Failed to fetch event ${eventId}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all active hourly BTC Up/Down events
+   */
+  async getHourlyBTCEvents(): Promise<any[]> {
+    try {
+      const series = await this.getSeries(SERIES_IDS.BTC_HOURLY);
+      const events = series.events || [];
+      
+      // Filter for non-closed events that end in the future
+      const now = new Date();
+      const activeEvents = events.filter((e: any) => {
+        if (e.closed) return false;
+        const endDate = new Date(e.endDate);
+        return endDate > now;
+      });
+
+      // Sort by end date (soonest first)
+      activeEvents.sort((a: any, b: any) => {
+        return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+      });
+
+      logger.info(`Found ${activeEvents.length} active hourly BTC events`);
+      return activeEvents;
+    } catch (error) {
+      logger.error('Failed to fetch hourly BTC events', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get upcoming hourly events that are good for trading
+   * (ending within the next N hours)
+   */
+  async getUpcomingHourlyEvents(hoursAhead: number = 24): Promise<any[]> {
+    try {
+      const events = await this.getHourlyBTCEvents();
+      const now = new Date();
+      const cutoff = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000);
+
+      return events.filter((e: any) => {
+        const endDate = new Date(e.endDate);
+        return endDate <= cutoff;
+      });
+    } catch (error) {
+      logger.error('Failed to fetch upcoming events', error);
+      throw error;
+    }
+  }
+
   async getOrderBook(tokenId: string): Promise<any> {
     try {
       if (!this.client) {
@@ -127,21 +220,67 @@ export class PolymarketClient {
       }
       const orderBook = await this.client.getOrderBook(tokenId);
       
-      // Get best ask price (what you'd pay to buy)
-      if (orderBook.asks && orderBook.asks.length > 0) {
-        return parseFloat(orderBook.asks[0].price);
-      }
-      
-      // Fallback to mid price if no asks
+      // Find best bid (highest bid price)
+      let bestBid = 0;
       if (orderBook.bids && orderBook.bids.length > 0) {
-        return parseFloat(orderBook.bids[0].price);
+        const bidPrices = orderBook.bids.map((b: any) => parseFloat(b.price));
+        bestBid = Math.max(...bidPrices);
       }
       
+      // Find best ask (lowest ask price)
+      let bestAsk = 0;
+      if (orderBook.asks && orderBook.asks.length > 0) {
+        const askPrices = orderBook.asks.map((a: any) => parseFloat(a.price));
+        bestAsk = Math.min(...askPrices);
+      }
+      
+      // If we have both bid and ask, use mid price
+      if (bestBid > 0 && bestAsk > 0) {
+        const midPrice = (bestBid + bestAsk) / 2;
+        logger.debug(`Token ${tokenId.slice(0, 10)}... bid=${bestBid} ask=${bestAsk} mid=${midPrice.toFixed(3)}`);
+        return midPrice;
+      }
+      
+      // If only ask, use ask (price to buy)
+      if (bestAsk > 0) {
+        return bestAsk;
+      }
+      
+      // If only bid, use bid
+      if (bestBid > 0) {
+        return bestBid;
+      }
+      
+      // No liquidity
       return 0;
     } catch (error) {
-      logger.error(`Failed to get price for ${tokenId}`, error);
+      logger.debug(`Failed to get price for ${tokenId}: ${error}`);
       return 0;
     }
+  }
+
+  /**
+   * Get prices directly from CLOB API for a list of token IDs
+   */
+  async getPrices(tokenIds: string[]): Promise<Map<string, number>> {
+    const prices = new Map<string, number>();
+    
+    try {
+      // Fetch prices in parallel for speed
+      const pricePromises = tokenIds.map(async (tokenId) => {
+        const price = await this.getPrice(tokenId);
+        return { tokenId, price };
+      });
+      
+      const results = await Promise.all(pricePromises);
+      results.forEach(({ tokenId, price }) => {
+        prices.set(tokenId, price);
+      });
+    } catch (error) {
+      logger.error('Failed to fetch prices', error);
+    }
+    
+    return prices;
   }
 
   async placeBuyOrder(tokenId: string, price: number, size: number): Promise<any> {

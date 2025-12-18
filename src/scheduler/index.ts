@@ -62,6 +62,7 @@ export class TradingScheduler {
 
   /**
    * Run a single market scan and execute trades
+   * Now scans hourly BTC Up/Down markets from Gamma API
    */
   async runScan(): Promise<void> {
     if (this.isRunning) {
@@ -76,7 +77,7 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('Starting market scan...');
+    logger.info('Starting hourly BTC market scan...');
 
     try {
       // Update calculator config in case it changed
@@ -85,12 +86,12 @@ export class TradingScheduler {
         maxCombinedCost: this.runtimeConfig.maxCombinedCost,
       });
 
-      // Scan for Bitcoin markets
-      const markets = await this.scanner.scanBitcoinMarkets();
-      logger.info(`Found ${markets.length} Bitcoin markets`);
+      // Scan for hourly BTC Up/Down markets
+      const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
+      logger.info(`Found ${hourlyMarkets.length} hourly BTC markets`);
 
-      // Find straddle opportunities
-      const opportunities = this.calculator.findOpportunities(markets);
+      // Find straddle opportunities in hourly markets
+      const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
       logger.info(`Found ${opportunities.length} viable straddle opportunities`);
 
       // Execute trades
@@ -102,7 +103,7 @@ export class TradingScheduler {
       }
 
       // Record scan in database
-      this.db.recordScan(markets.length, opportunities.length, tradesExecuted);
+      this.db.recordScan(hourlyMarkets.length, opportunities.length, tradesExecuted);
 
     } catch (error) {
       logger.error('Scan failed', error);
@@ -121,7 +122,7 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('Starting forced market scan...');
+    logger.info('Starting forced hourly BTC market scan...');
 
     try {
       this.calculator.updateConfig({
@@ -129,8 +130,9 @@ export class TradingScheduler {
         maxCombinedCost: this.runtimeConfig.maxCombinedCost,
       });
 
-      const markets = await this.scanner.scanBitcoinMarkets();
-      const opportunities = this.calculator.findOpportunities(markets);
+      // Scan hourly BTC markets
+      const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
+      const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
       
       let tradesExecuted = 0;
       if (opportunities.length > 0 && this.runtimeConfig.botEnabled) {
@@ -138,10 +140,10 @@ export class TradingScheduler {
         tradesExecuted = trades.length;
       }
 
-      this.db.recordScan(markets.length, opportunities.length, tradesExecuted);
+      this.db.recordScan(hourlyMarkets.length, opportunities.length, tradesExecuted);
 
       return {
-        markets: markets.length,
+        markets: hourlyMarkets.length,
         opportunities: opportunities.length,
         trades: tradesExecuted,
       };

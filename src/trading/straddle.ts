@@ -1,4 +1,4 @@
-import { StraddleOpportunity } from '../types';
+import { StraddleOpportunity, HourlyMarket } from '../types';
 import { ParsedMarket } from '../polymarket/markets';
 import { RuntimeConfig } from '../config';
 import { createLogger } from '../utils/logger';
@@ -211,6 +211,99 @@ export class StraddleCalculator {
   updateConfig(config: Partial<StraddleConfig>) {
     if (config.betSize !== undefined) this.config.betSize = config.betSize;
     if (config.maxCombinedCost !== undefined) this.config.maxCombinedCost = config.maxCombinedCost;
+  }
+
+  /**
+   * Analyze an hourly market (from Gamma API) for straddle opportunity
+   */
+  analyzeHourlyMarket(market: HourlyMarket): StraddleOpportunity | null {
+    const upPrice = market.upToken.price;
+    const downPrice = market.downToken.price;
+
+    // Validate prices
+    if (upPrice <= 0 || downPrice <= 0) {
+      logger.debug(`Market ${market.eventId} has invalid prices: up=${upPrice}, down=${downPrice}`);
+      return null;
+    }
+
+    const combinedCost = upPrice + downPrice;
+
+    // Check if combined cost is within acceptable range
+    if (combinedCost > this.config.maxCombinedCost) {
+      logger.debug(`Market ${market.eventId} combined cost too high: ${combinedCost}`);
+      return null;
+    }
+
+    // Calculate balanced position sizes
+    const halfBet = this.config.betSize / 2;
+    const upSize = halfBet / upPrice;
+    const downSize = halfBet / downPrice;
+
+    // Calculate expected value based on the miscalibration thesis
+    const expectedValue = this.calculateExpectedValue(upPrice, downPrice, upSize, downSize);
+
+    const isViable = this.isViableStraddle(upPrice, downPrice, combinedCost);
+
+    return {
+      market: {
+        id: market.eventId,
+        condition_id: market.conditionId,
+        question: market.title,
+        description: '',
+        market_slug: market.slug,
+        end_date_iso: market.endDate.toISOString(),
+        active: true,
+        closed: false,
+        tokens: [],
+        minimum_order_size: 5,
+        minimum_tick_size: 0.01,
+      },
+      upToken: {
+        token_id: market.upToken.tokenId,
+        outcome: 'Up',
+        price: upPrice,
+        winner: false,
+      },
+      downToken: {
+        token_id: market.downToken.tokenId,
+        outcome: 'Down',
+        price: downPrice,
+        winner: false,
+      },
+      upPrice,
+      downPrice,
+      combinedCost,
+      upSize,
+      downSize,
+      expectedValue,
+      isViable,
+    };
+  }
+
+  /**
+   * Find opportunities from hourly markets
+   */
+  findHourlyOpportunities(markets: HourlyMarket[]): StraddleOpportunity[] {
+    const opportunities: StraddleOpportunity[] = [];
+
+    for (const market of markets) {
+      const opportunity = this.analyzeHourlyMarket(market);
+      if (opportunity && opportunity.isViable) {
+        opportunities.push(opportunity);
+        logger.info(`Found hourly opportunity: ${market.title}`, {
+          upPrice: opportunity.upPrice.toFixed(3),
+          downPrice: opportunity.downPrice.toFixed(3),
+          combinedCost: opportunity.combinedCost.toFixed(3),
+          expectedValue: opportunity.expectedValue.toFixed(4),
+          hoursLeft: market.hoursUntilClose.toFixed(1),
+        });
+      }
+    }
+
+    // Sort by expected value (highest first)
+    opportunities.sort((a, b) => b.expectedValue - a.expectedValue);
+
+    return opportunities;
   }
 }
 
