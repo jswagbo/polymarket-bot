@@ -43,10 +43,12 @@ export class TradeDatabase {
   }
 
   private initializeTables() {
-    // Trades table
+    // Trades table (updated for single-leg strategy)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS trades (
         id TEXT PRIMARY KEY,
+        trade_type TEXT DEFAULT 'straddle',
+        side TEXT,
         market_id TEXT NOT NULL,
         market_question TEXT NOT NULL,
         up_token_id TEXT NOT NULL,
@@ -64,6 +66,20 @@ export class TradeDatabase {
         resolved_at TEXT
       )
     `);
+    
+    // Add new columns if they don't exist (for migration)
+    try {
+      this.db.exec(`ALTER TABLE trades ADD COLUMN trade_type TEXT DEFAULT 'straddle'`);
+      logger.info('Added trade_type column');
+    } catch (e) {
+      // Column already exists
+    }
+    try {
+      this.db.exec(`ALTER TABLE trades ADD COLUMN side TEXT`);
+      logger.info('Added side column');
+    } catch (e) {
+      // Column already exists
+    }
 
     // Create indexes for faster queries
     this.db.exec(`
@@ -103,18 +119,25 @@ export class TradeDatabase {
       
       const stmt = this.db.prepare(`
         INSERT INTO trades (
-          id, market_id, market_question, up_token_id, down_token_id,
+          id, trade_type, side, market_id, market_question, up_token_id, down_token_id,
           up_price, down_price, up_size, down_size, combined_cost,
           status, up_order_id, down_order_id, pnl, created_at, resolved_at
         ) VALUES (
-          @id, @market_id, @market_question, @up_token_id, @down_token_id,
+          @id, @trade_type, @side, @market_id, @market_question, @up_token_id, @down_token_id,
           @up_price, @down_price, @up_size, @down_size, @combined_cost,
           @status, @up_order_id, @down_order_id, @pnl, @created_at, @resolved_at
         )
       `);
       
-      const result = stmt.run(trade);
-      logger.info(`Trade saved: ${trade.id} (changes: ${result.changes})`);
+      // Ensure trade_type has a default
+      const tradeData = {
+        ...trade,
+        trade_type: trade.trade_type || 'straddle',
+        side: trade.side || null,
+      };
+      
+      const result = stmt.run(tradeData);
+      logger.info(`Trade saved: ${trade.id} (type: ${tradeData.trade_type}, changes: ${result.changes})`);
     } catch (error: any) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`Database saveTrade error: ${errorMsg}`);

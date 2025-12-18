@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Trade, StraddleOpportunity, TradeStatus } from '../types';
+import { Trade, StraddleOpportunity, SingleLegOpportunity, TradeStatus } from '../types';
 import { PolymarketClient } from '../polymarket/client';
 import { Database } from '../db/database';
 import { createLogger } from '../utils/logger';
@@ -13,33 +13,36 @@ export class TradeExecutor {
   ) {}
 
   /**
-   * Execute a straddle trade (buy both up and down)
+   * NEW: Execute a single-leg trade (buy expensive side only)
    */
-  async executeStraddle(opportunity: StraddleOpportunity): Promise<Trade | null> {
+  async executeSingleLeg(opportunity: SingleLegOpportunity): Promise<Trade | null> {
     const tradeId = uuidv4();
     
-    logger.info(`=== EXECUTING STRADDLE ===`);
+    logger.info(`=== EXECUTING SINGLE-LEG TRADE ===`);
     logger.info(`Trade ID: ${tradeId}`);
     logger.info(`Market: ${opportunity.market.question}`);
-    logger.info(`Up Token: ${opportunity.upToken.token_id}`);
-    logger.info(`Down Token: ${opportunity.downToken.token_id}`);
-    logger.info(`Up Price: $${opportunity.upPrice.toFixed(3)} | Size: ${opportunity.upSize.toFixed(2)}`);
-    logger.info(`Down Price: $${opportunity.downPrice.toFixed(3)} | Size: ${opportunity.downSize.toFixed(2)}`);
-    logger.info(`Combined Cost: $${opportunity.combinedCost.toFixed(3)}`);
+    logger.info(`Side: ${opportunity.side.toUpperCase()}`);
+    logger.info(`Token: ${opportunity.token.token_id}`);
+    logger.info(`Price: $${opportunity.price.toFixed(3)} (${(opportunity.price * 100).toFixed(1)}¢)`);
+    logger.info(`Size: ${opportunity.size.toFixed(2)} shares`);
+    logger.info(`Total Cost: $${(opportunity.price * opportunity.size).toFixed(2)}`);
+    logger.info(`Expected Win Rate: ${(opportunity.expectedWinRate * 100).toFixed(0)}%`);
+    logger.info(`Expected Value: +$${opportunity.expectedValue.toFixed(2)}`);
 
-    // Create trade record with explicit null values for optional fields
-    // (SQLite needs explicit null, not undefined)
+    // Create trade record
     const trade: Trade = {
       id: tradeId,
+      trade_type: 'single_leg',
+      side: opportunity.side,
       market_id: opportunity.market.condition_id,
       market_question: opportunity.market.question,
-      up_token_id: opportunity.upToken.token_id,
-      down_token_id: opportunity.downToken.token_id,
-      up_price: opportunity.upPrice,
-      down_price: opportunity.downPrice,
-      up_size: opportunity.upSize,
-      down_size: opportunity.downSize,
-      combined_cost: opportunity.combinedCost,
+      up_token_id: opportunity.side === 'up' ? opportunity.token.token_id : '',
+      down_token_id: opportunity.side === 'down' ? opportunity.token.token_id : '',
+      up_price: opportunity.side === 'up' ? opportunity.price : 0,
+      down_price: opportunity.side === 'down' ? opportunity.price : 0,
+      up_size: opportunity.side === 'up' ? opportunity.size : 0,
+      down_size: opportunity.side === 'down' ? opportunity.size : 0,
+      combined_cost: opportunity.price * opportunity.size,
       status: 'pending',
       up_order_id: null as any,
       down_order_id: null as any,
@@ -55,10 +58,7 @@ export class TradeExecutor {
       logger.info(`Trade ${tradeId} saved to database`);
     } catch (dbError: any) {
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
-      const errorStack = dbError instanceof Error ? dbError.stack : 'No stack';
       logger.error(`Failed to save trade to database: ${errorMessage}`);
-      logger.error(`Database error stack: ${errorStack}`);
-      logger.error(`Trade data that failed:`, JSON.stringify(trade, null, 2));
       return null;
     }
 
@@ -69,46 +69,43 @@ export class TradeExecutor {
     if (isReadOnly) {
       logger.warn('Client is in read-only mode - simulating trade');
       trade.status = 'open';
-      trade.up_order_id = 'simulated-up-' + tradeId;
-      trade.down_order_id = 'simulated-down-' + tradeId;
+      if (opportunity.side === 'up') {
+        trade.up_order_id = 'simulated-' + tradeId;
+      } else {
+        trade.down_order_id = 'simulated-' + tradeId;
+      }
       this.db.updateTrade(trade);
-      logger.info(`Simulated trade ${tradeId} created successfully`);
+      logger.info(`Simulated single-leg trade ${tradeId} created successfully`);
       return trade;
     }
 
     try {
-      // Place UP order
-      logger.info(`Placing UP order: ${opportunity.upSize.toFixed(2)} shares at $${opportunity.upPrice.toFixed(3)}`);
-      const upOrder = await this.client.placeBuyOrder(
-        opportunity.upToken.token_id,
-        opportunity.upPrice,
-        opportunity.upSize
+      // Place order for the expensive side
+      logger.info(`Placing ${opportunity.side.toUpperCase()} order: ${opportunity.size.toFixed(2)} shares at $${opportunity.price.toFixed(3)}`);
+      
+      const order = await this.client.placeBuyOrder(
+        opportunity.token.token_id,
+        opportunity.price,
+        opportunity.size
       );
-      logger.info(`UP order placed:`, upOrder);
-      trade.up_order_id = upOrder.orderID || upOrder.id;
-      trade.status = 'partial';
-      this.db.updateTrade(trade);
-
-      // Place DOWN order
-      logger.info(`Placing DOWN order: ${opportunity.downSize.toFixed(2)} shares at $${opportunity.downPrice.toFixed(3)}`);
-      const downOrder = await this.client.placeBuyOrder(
-        opportunity.downToken.token_id,
-        opportunity.downPrice,
-        opportunity.downSize
-      );
-      logger.info(`DOWN order placed:`, downOrder);
-      trade.down_order_id = downOrder.orderID || downOrder.id;
+      
+      logger.info(`Order placed successfully:`, order);
+      
+      if (opportunity.side === 'up') {
+        trade.up_order_id = order.orderID || order.id;
+      } else {
+        trade.down_order_id = order.orderID || order.id;
+      }
       trade.status = 'open';
       this.db.updateTrade(trade);
 
-      logger.info(`=== STRADDLE EXECUTED SUCCESSFULLY ===`);
+      logger.info(`=== SINGLE-LEG TRADE EXECUTED SUCCESSFULLY ===`);
       logger.info(`Trade ID: ${tradeId}`);
-      logger.info(`UP Order ID: ${trade.up_order_id}`);
-      logger.info(`DOWN Order ID: ${trade.down_order_id}`);
+      logger.info(`Order ID: ${order.orderID || order.id}`);
       return trade;
 
     } catch (error) {
-      logger.error(`=== STRADDLE EXECUTION FAILED ===`);
+      logger.error(`=== SINGLE-LEG TRADE FAILED ===`);
       logger.error(`Trade ID: ${tradeId}`);
       if (error instanceof Error) {
         logger.error(`Error: ${error.message}`);
@@ -119,40 +116,21 @@ export class TradeExecutor {
       
       trade.status = 'failed';
       this.db.updateTrade(trade);
-
-      // Try to cancel any placed orders
-      if (trade.up_order_id) {
-        try {
-          await this.client.cancelOrder(trade.up_order_id);
-          logger.info(`Cancelled UP order: ${trade.up_order_id}`);
-        } catch (cancelError) {
-          logger.error('Failed to cancel UP order', cancelError);
-        }
-      }
-      if (trade.down_order_id) {
-        try {
-          await this.client.cancelOrder(trade.down_order_id);
-          logger.info(`Cancelled DOWN order: ${trade.down_order_id}`);
-        } catch (cancelError) {
-          logger.error('Failed to cancel DOWN order', cancelError);
-        }
-      }
-
       return null;
     }
   }
 
   /**
-   * Execute multiple straddles
+   * Execute multiple single-leg trades
    */
-  async executeStraddles(opportunities: StraddleOpportunity[]): Promise<Trade[]> {
+  async executeSingleLegTrades(opportunities: SingleLegOpportunity[]): Promise<Trade[]> {
     const trades: Trade[] = [];
     
-    logger.info(`executeStraddles called with ${opportunities.length} opportunities`);
+    logger.info(`executeSingleLegTrades called with ${opportunities.length} opportunities`);
 
     for (let i = 0; i < opportunities.length; i++) {
       const opportunity = opportunities[i];
-      logger.info(`Processing opportunity ${i + 1}/${opportunities.length}: ${opportunity.market.question}`);
+      logger.info(`Processing opportunity ${i + 1}/${opportunities.length}: ${opportunity.market.question} (${opportunity.side.toUpperCase()})`);
       
       // Check if we already have an open trade for this market
       const existingTrade = this.db.getTradeByMarketId(opportunity.market.condition_id);
@@ -162,24 +140,38 @@ export class TradeExecutor {
       }
 
       try {
-        logger.info(`No existing trade found, executing new straddle...`);
-        const trade = await this.executeStraddle(opportunity);
+        logger.info(`No existing trade found, executing new single-leg trade...`);
+        const trade = await this.executeSingleLeg(opportunity);
         if (trade) {
           trades.push(trade);
           logger.info(`Trade created: ${trade.id} with status ${trade.status}`);
         } else {
-          logger.warn(`executeStraddle returned null for ${opportunity.market.question}`);
+          logger.warn(`executeSingleLeg returned null for ${opportunity.market.question}`);
         }
       } catch (error) {
-        logger.error(`Error executing straddle for ${opportunity.market.question}:`, error);
+        logger.error(`Error executing single-leg trade for ${opportunity.market.question}:`, error);
       }
 
       // Add small delay between orders to avoid rate limiting
       await this.delay(500);
     }
 
-    logger.info(`executeStraddles complete: ${trades.length} trades created`);
+    logger.info(`executeSingleLegTrades complete: ${trades.length} trades created`);
     return trades;
+  }
+
+  // ============================================
+  // LEGACY STRADDLE METHODS (kept for compatibility)
+  // ============================================
+
+  async executeStraddle(opportunity: StraddleOpportunity): Promise<Trade | null> {
+    logger.warn('executeStraddle called but strategy has been updated to single-leg');
+    return null;
+  }
+
+  async executeStraddles(opportunities: StraddleOpportunity[]): Promise<Trade[]> {
+    logger.warn('executeStraddles called but strategy has been updated to single-leg');
+    return [];
   }
 
   /**
@@ -216,18 +208,7 @@ export class TradeExecutor {
     }
   }
 
-  /**
-   * Update trade status based on market resolution
-   */
-  async checkAndUpdateTradeStatus(trade: Trade): Promise<Trade> {
-    // In a full implementation, this would check if the market has resolved
-    // and update the trade PnL accordingly
-    // For now, return the trade as-is
-    return trade;
-  }
-
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
-

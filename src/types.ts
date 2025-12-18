@@ -48,10 +48,25 @@ export interface StraddleOpportunity {
   isViable: boolean;
 }
 
+// NEW: Single-leg opportunity (buy expensive side only)
+export interface SingleLegOpportunity {
+  market: Market;
+  token: Token;
+  side: 'up' | 'down';
+  price: number;
+  size: number;
+  expectedValue: number;
+  expectedWinRate: number;
+  isViable: boolean;
+}
+
 export interface Trade {
   id: string;
   market_id: string;
   market_question: string;
+  // Support both straddle (both tokens) and single-leg (one token) trades
+  trade_type: 'straddle' | 'single_leg';
+  side?: 'up' | 'down';           // For single-leg trades
   up_token_id: string;
   down_token_id: string;
   up_price: number;

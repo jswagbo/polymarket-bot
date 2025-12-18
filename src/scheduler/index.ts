@@ -17,6 +17,7 @@ export interface LiveMarketData {
   combinedCost: number;
   hoursLeft: number;
   isViable: boolean;
+  viableSide: 'up' | 'down' | null;
   expectedValue: number;
 }
 
@@ -74,7 +75,7 @@ export class TradingScheduler {
 
   /**
    * Run a single market scan and execute trades
-   * Now scans hourly BTC Up/Down markets from Gamma API
+   * NEW STRATEGY: Buy expensive side (≥70¢) only
    */
   async runScan(): Promise<void> {
     if (this.isRunning) {
@@ -89,7 +90,7 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('Starting hourly BTC market scan...');
+    logger.info('=== STARTING MARKET SCAN (Single-Leg Strategy: Buy ≥70¢) ===');
 
     try {
       // Update calculator config in case it changed
@@ -106,51 +107,52 @@ export class TradingScheduler {
       // Store live market data for dashboard
       logger.info('Building live market data for dashboard...');
       this.lastScannedMarkets = hourlyMarkets.map(market => {
-        const opportunity = this.calculator.analyzeHourlyMarket(market);
+        const analysis = this.calculator.analyzeHourlyMarket(market);
         return {
           eventId: market.eventId,
           title: market.title,
-          upPrice: market.upToken.price,
-          downPrice: market.downToken.price,
-          combinedCost: market.upToken.price + market.downToken.price,
+          upPrice: analysis.upPrice,
+          downPrice: analysis.downPrice,
+          combinedCost: analysis.combinedCost,
           hoursLeft: market.hoursUntilClose,
-          isViable: opportunity?.isViable || false,
-          expectedValue: opportunity?.expectedValue || 0,
+          isViable: analysis.isViable,
+          viableSide: analysis.viableSide,
+          expectedValue: analysis.expectedValue,
         };
       });
       logger.info(`Built ${this.lastScannedMarkets.length} live market entries`);
 
-      // Find straddle opportunities in hourly markets
-      logger.info('Finding straddle opportunities...');
-      const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
-      logger.info(`Found ${opportunities.length} viable straddle opportunities`);
+      // Find single-leg opportunities (≥70¢ on either side)
+      logger.info('Finding single-leg opportunities (≥70¢)...');
+      const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
+      logger.info(`Found ${opportunities.length} markets with expensive side (≥70¢)`);
 
       // Execute trades
       let tradesExecuted = 0;
       if (opportunities.length > 0) {
-        logger.info(`Attempting to execute ${opportunities.length} straddle trade(s)...`);
+        logger.info(`Attempting to execute ${opportunities.length} single-leg trade(s)...`);
         logger.info(`Client read-only mode: ${this.client.isReadOnly()}`);
         
         try {
-          const trades = await this.executor.executeStraddles(opportunities);
+          const trades = await this.executor.executeSingleLegTrades(opportunities);
           tradesExecuted = trades.length;
           logger.info(`Successfully executed ${tradesExecuted} trades`);
           
           if (trades.length > 0) {
             trades.forEach(trade => {
-              logger.info(`Trade ${trade.id}: ${trade.market_question} - Status: ${trade.status}`);
+              logger.info(`Trade ${trade.id}: ${trade.market_question} (${trade.side?.toUpperCase()}) - Status: ${trade.status}`);
             });
           }
         } catch (execError) {
           logger.error('Trade execution failed:', execError);
         }
       } else {
-        logger.info('No viable opportunities to trade at this time');
+        logger.info('No markets with ≥70¢ side at this time - waiting for opportunity');
       }
 
       // Record scan in database
       this.db.recordScan(hourlyMarkets.length, opportunities.length, tradesExecuted);
-      logger.info(`Scan complete: ${hourlyMarkets.length} markets, ${opportunities.length} opportunities, ${tradesExecuted} trades`);
+      logger.info(`=== SCAN COMPLETE: ${hourlyMarkets.length} markets, ${opportunities.length} opportunities, ${tradesExecuted} trades ===`);
 
     } catch (error) {
       logger.error('Scan failed with error:', error);
@@ -173,7 +175,7 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('Starting forced hourly BTC market scan...');
+    logger.info('Starting forced hourly BTC market scan (Single-Leg Strategy)...');
 
     try {
       this.calculator.updateConfig({
@@ -186,24 +188,26 @@ export class TradingScheduler {
       
       // Store live market data for dashboard
       this.lastScannedMarkets = hourlyMarkets.map(market => {
-        const opportunity = this.calculator.analyzeHourlyMarket(market);
+        const analysis = this.calculator.analyzeHourlyMarket(market);
         return {
           eventId: market.eventId,
           title: market.title,
-          upPrice: market.upToken.price,
-          downPrice: market.downToken.price,
-          combinedCost: market.upToken.price + market.downToken.price,
+          upPrice: analysis.upPrice,
+          downPrice: analysis.downPrice,
+          combinedCost: analysis.combinedCost,
           hoursLeft: market.hoursUntilClose,
-          isViable: opportunity?.isViable || false,
-          expectedValue: opportunity?.expectedValue || 0,
+          isViable: analysis.isViable,
+          viableSide: analysis.viableSide,
+          expectedValue: analysis.expectedValue,
         };
       });
 
-      const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
+      // Find single-leg opportunities (≥70¢)
+      const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
       
       let tradesExecuted = 0;
       if (opportunities.length > 0 && this.runtimeConfig.botEnabled) {
-        const trades = await this.executor.executeStraddles(opportunities);
+        const trades = await this.executor.executeSingleLegTrades(opportunities);
         tradesExecuted = trades.length;
       }
 
