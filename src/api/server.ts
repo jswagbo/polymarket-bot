@@ -196,7 +196,7 @@ export function createServer(
 
       logger.info('Manually triggering allowance setup...');
       const clobClient = client.getClient();
-      await clobClient.setAllowances();
+      await clobClient.updateBalanceAllowance();
       
       logger.info('Allowances approved successfully');
       res.json({ success: true, message: 'USDC spending approved for Polymarket CLOB' });

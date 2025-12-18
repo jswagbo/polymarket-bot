@@ -82,8 +82,8 @@ export class PolymarketClient {
       // Set up allowances for trading (approve USDC spending)
       logger.info('Setting up token allowances for CLOB trading...');
       try {
-        // This approves the USDC and conditional tokens for the CLOB exchange
-        await this.client.setAllowances();
+        // This updates the balance allowance for the CLOB exchange
+        await this.client.updateBalanceAllowance();
         logger.info('Token allowances set successfully');
       } catch (allowanceError: any) {
         logger.warn(`Allowance setup warning: ${allowanceError.message || allowanceError}`);
