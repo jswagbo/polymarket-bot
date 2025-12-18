@@ -194,15 +194,32 @@ export function createServer(
         return;
       }
 
-      logger.info('Manually triggering allowance setup...');
-      const clobClient = client.getClient();
-      await clobClient.updateBalanceAllowance();
+      logger.info('Manually triggering USDC approval...');
+      await client.approveUsdcSpending();
       
-      logger.info('Allowances approved successfully');
-      res.json({ success: true, message: 'USDC spending approved for Polymarket CLOB' });
+      logger.info('USDC approved successfully');
+      res.json({ success: true, message: 'USDC spending approved for Polymarket exchanges' });
     } catch (error: any) {
-      logger.error('Failed to set allowances', error);
+      logger.error('Failed to approve USDC', error);
       res.status(500).json({ success: false, error: error.message || 'Failed to approve' });
+    }
+  });
+
+  // Check USDC status (balance and allowances)
+  app.get('/api/bot/usdc-status', async (req: Request, res: Response) => {
+    try {
+      const client = (scheduler as any).client as import('../polymarket/client').PolymarketClient;
+      
+      if (client.isReadOnly()) {
+        res.status(400).json({ success: false, error: 'No wallet configured' });
+        return;
+      }
+
+      const status = await client.checkUsdcStatus();
+      res.json({ success: true, data: status });
+    } catch (error: any) {
+      logger.error('Failed to check USDC status', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to check status' });
     }
   });
 

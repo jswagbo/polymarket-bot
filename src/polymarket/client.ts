@@ -8,6 +8,19 @@ const logger = createLogger('PolymarketClient');
 const CLOB_API_URL = 'https://clob.polymarket.com';
 const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
 
+// Polygon contract addresses
+const POLYGON_RPC = 'https://polygon-rpc.com';
+const USDC_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e on Polygon
+const CTF_EXCHANGE = '0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E'; // Polymarket CTF Exchange
+const NEG_RISK_CTF_EXCHANGE = '0xC5d563A36AE78145C45a50134d48A1215220f80a'; // Neg Risk Exchange
+
+// ERC20 ABI for approve
+const ERC20_ABI = [
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function balanceOf(address account) external view returns (uint256)'
+];
+
 // Series IDs for recurring markets
 export const SERIES_IDS = {
   BTC_HOURLY: '10114',      // BTC Up or Down Hourly
@@ -82,8 +95,7 @@ export class PolymarketClient {
       // Set up allowances for trading (approve USDC spending)
       logger.info('Setting up token allowances for CLOB trading...');
       try {
-        // This updates the balance allowance for the CLOB exchange
-        await this.client.updateBalanceAllowance();
+        await this.approveUsdcSpending();
         logger.info('Token allowances set successfully');
       } catch (allowanceError: any) {
         logger.warn(`Allowance setup warning: ${allowanceError.message || allowanceError}`);
@@ -416,6 +428,82 @@ export class PolymarketClient {
     // Note: Balance fetching requires additional integration with Polygon RPC
     // For now, return placeholder - in production this would query the blockchain
     return { usdc: 0, positions: [] };
+  }
+
+  /**
+   * Approve USDC spending for Polymarket exchanges
+   * This is required before placing any orders
+   */
+  async approveUsdcSpending(): Promise<void> {
+    if (!this.wallet) {
+      throw new Error('No wallet configured');
+    }
+
+    const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC);
+    const connectedWallet = this.wallet.connect(provider);
+    const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, connectedWallet);
+    
+    // Max approval amount
+    const maxApproval = ethers.constants.MaxUint256;
+
+    // Check current allowances
+    const address = await connectedWallet.getAddress();
+    
+    // Check and approve CTF Exchange
+    const ctfAllowance = await usdc.allowance(address, CTF_EXCHANGE);
+    logger.info(`Current CTF Exchange allowance: ${ethers.utils.formatUnits(ctfAllowance, 6)} USDC`);
+    
+    if (ctfAllowance.lt(ethers.utils.parseUnits('1000000', 6))) {
+      logger.info('Approving USDC for CTF Exchange...');
+      const tx1 = await usdc.approve(CTF_EXCHANGE, maxApproval);
+      logger.info(`Approval tx sent: ${tx1.hash}`);
+      await tx1.wait();
+      logger.info('CTF Exchange approved ✓');
+    } else {
+      logger.info('CTF Exchange already approved ✓');
+    }
+
+    // Check and approve Neg Risk CTF Exchange
+    const negRiskAllowance = await usdc.allowance(address, NEG_RISK_CTF_EXCHANGE);
+    logger.info(`Current Neg Risk Exchange allowance: ${ethers.utils.formatUnits(negRiskAllowance, 6)} USDC`);
+    
+    if (negRiskAllowance.lt(ethers.utils.parseUnits('1000000', 6))) {
+      logger.info('Approving USDC for Neg Risk CTF Exchange...');
+      const tx2 = await usdc.approve(NEG_RISK_CTF_EXCHANGE, maxApproval);
+      logger.info(`Approval tx sent: ${tx2.hash}`);
+      await tx2.wait();
+      logger.info('Neg Risk CTF Exchange approved ✓');
+    } else {
+      logger.info('Neg Risk CTF Exchange already approved ✓');
+    }
+
+    // Also check USDC balance
+    const balance = await usdc.balanceOf(address);
+    logger.info(`USDC Balance: ${ethers.utils.formatUnits(balance, 6)} USDC`);
+  }
+
+  /**
+   * Check USDC balance and allowances
+   */
+  async checkUsdcStatus(): Promise<{ balance: string; ctfAllowance: string; negRiskAllowance: string }> {
+    if (!this.wallet) {
+      throw new Error('No wallet configured');
+    }
+
+    const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC);
+    const connectedWallet = this.wallet.connect(provider);
+    const usdc = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, connectedWallet);
+    const address = await connectedWallet.getAddress();
+
+    const balance = await usdc.balanceOf(address);
+    const ctfAllowance = await usdc.allowance(address, CTF_EXCHANGE);
+    const negRiskAllowance = await usdc.allowance(address, NEG_RISK_CTF_EXCHANGE);
+
+    return {
+      balance: ethers.utils.formatUnits(balance, 6),
+      ctfAllowance: ethers.utils.formatUnits(ctfAllowance, 6),
+      negRiskAllowance: ethers.utils.formatUnits(negRiskAllowance, 6),
+    };
   }
 }
 
