@@ -178,6 +178,17 @@ export function createServer(
     }
   });
 
+  // Get live markets (last scanned)
+  app.get('/api/markets/live', (req: Request, res: Response) => {
+    try {
+      const liveMarkets = scheduler.getLiveMarkets();
+      res.json({ success: true, data: liveMarkets });
+    } catch (error) {
+      logger.error('Failed to get live markets', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
   // Serve dashboard for all other routes
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));

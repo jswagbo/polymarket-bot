@@ -472,6 +472,117 @@
       margin-bottom: 16px;
       opacity: 0.3;
     }
+
+    /* Live Markets Grid */
+    .markets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .market-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+
+    .market-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-2px);
+    }
+
+    .market-card.viable {
+      border-color: var(--success);
+      background: rgba(0, 221, 136, 0.05);
+    }
+
+    .market-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .market-prices {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .price-box {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .price-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .price-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .price-value.up { color: var(--success); }
+    .price-value.down { color: var(--danger); }
+
+    .market-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .market-combined {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .market-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .viable-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(0, 221, 136, 0.1);
+      color: var(--success);
+    }
+
+    .not-viable-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(136, 136, 160, 0.1);
+      color: var(--text-secondary);
+    }
   </style>
 </head>
 <body>
@@ -542,6 +653,20 @@
       </div>
     </div>
 
+    <!-- Live Markets -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">📡 Live Markets</h2>
+        <button class="btn btn-secondary" id="refreshMarketsBtn">🔄 Refresh</button>
+      </div>
+      <div id="liveMarketsContainer">
+        <div class="empty-state">
+          <div class="empty-state-icon">📊</div>
+          <p>No market data yet. Click "Force Scan" to fetch live markets.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Trades Table -->
     <div class="card">
       <div class="card-header">
@@ -590,6 +715,7 @@
     document.getElementById('forceScanBtn').addEventListener('click', forceScan);
     document.getElementById('emergencyStopBtn').addEventListener('click', emergencyStop);
     document.getElementById('refreshTradesBtn').addEventListener('click', () => fetchStats());
+    document.getElementById('refreshMarketsBtn').addEventListener('click', fetchLiveMarkets);
 
     // API Functions
     async function apiCall(endpoint, method = 'GET', body = null) {
@@ -626,8 +752,19 @@
       try {
         const { data } = await apiCall('/stats');
         updateDashboard(data);
+        // Also fetch live markets
+        fetchLiveMarkets();
       } catch (error) {
         console.error('Failed to fetch stats:', error);
+      }
+    }
+
+    async function fetchLiveMarkets() {
+      try {
+        const { data } = await apiCall('/markets/live');
+        renderLiveMarkets(data);
+      } catch (error) {
+        console.error('Failed to fetch live markets:', error);
       }
     }
 
@@ -660,8 +797,11 @@
         btn.innerHTML = '<div class="spinner"></div> Scanning...';
         
         const { data } = await apiCall('/bot/scan', 'POST');
-        showToast(`Scan complete: ${data.markets} markets, ${data.opportunities} opportunities, ${data.trades} trades`, 'success');
-        fetchStats();
+        showToast(`Scan complete: ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
+        
+        // Refresh both stats and live markets
+        await fetchStats();
+        await fetchLiveMarkets();
       } catch (error) {
         showToast('Scan failed: ' + error.message, 'error');
       } finally {
@@ -714,6 +854,63 @@
 
       // Trades
       renderTrades(data.recentTrades);
+    }
+
+    function renderLiveMarkets(markets) {
+      const container = document.getElementById('liveMarketsContainer');
+      
+      if (!markets || markets.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <p>No market data yet. Click "Force Scan" to fetch live markets.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort: viable first, then by hours left
+      markets.sort((a, b) => {
+        if (a.isViable !== b.isViable) return b.isViable - a.isViable;
+        return a.hoursLeft - b.hoursLeft;
+      });
+
+      container.innerHTML = `
+        <div class="markets-grid">
+          ${markets.map(m => `
+            <div class="market-card ${m.isViable ? 'viable' : ''}">
+              <div class="market-title" title="${m.title}">${m.title}</div>
+              <div class="market-prices">
+                <div class="price-box">
+                  <div class="price-label">Up</div>
+                  <div class="price-value up">${(m.upPrice * 100).toFixed(1)}¢</div>
+                </div>
+                <div class="price-box">
+                  <div class="price-label">Down</div>
+                  <div class="price-value down">${(m.downPrice * 100).toFixed(1)}¢</div>
+                </div>
+              </div>
+              <div class="market-meta">
+                <div class="market-combined">
+                  Combined: ${(m.combinedCost * 100).toFixed(1)}¢
+                </div>
+                <div class="market-time">
+                  ⏱️ ${m.hoursLeft.toFixed(1)}h left
+                </div>
+              </div>
+              <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                ${m.isViable 
+                  ? `<span class="viable-badge">✓ Viable</span>` 
+                  : `<span class="not-viable-badge">— No edge</span>`
+                }
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+                  EV: ${m.expectedValue >= 0 ? '+' : ''}$${m.expectedValue.toFixed(3)}
+                </span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
     }
 
     function renderTrades(trades) {

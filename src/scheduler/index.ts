@@ -9,10 +9,22 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Scheduler');
 
+export interface LiveMarketData {
+  eventId: string;
+  title: string;
+  upPrice: number;
+  downPrice: number;
+  combinedCost: number;
+  hoursLeft: number;
+  isViable: boolean;
+  expectedValue: number;
+}
+
 export class TradingScheduler {
   private cronJob: cron.ScheduledTask | null = null;
   private isRunning = false;
   private lastScanTime: Date | null = null;
+  private lastScannedMarkets: LiveMarketData[] = [];
   private scanner: MarketScanner;
   private calculator: StraddleCalculator;
   private executor: TradeExecutor;
@@ -90,6 +102,21 @@ export class TradingScheduler {
       const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
       logger.info(`Found ${hourlyMarkets.length} hourly BTC markets`);
 
+      // Store live market data for dashboard
+      this.lastScannedMarkets = hourlyMarkets.map(market => {
+        const opportunity = this.calculator.analyzeHourlyMarket(market);
+        return {
+          eventId: market.eventId,
+          title: market.title,
+          upPrice: market.upToken.price,
+          downPrice: market.downToken.price,
+          combinedCost: market.upToken.price + market.downToken.price,
+          hoursLeft: market.hoursUntilClose,
+          isViable: opportunity?.isViable || false,
+          expectedValue: opportunity?.expectedValue || 0,
+        };
+      });
+
       // Find straddle opportunities in hourly markets
       const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
       logger.info(`Found ${opportunities.length} viable straddle opportunities`);
@@ -132,6 +159,22 @@ export class TradingScheduler {
 
       // Scan hourly BTC markets
       const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
+      
+      // Store live market data for dashboard
+      this.lastScannedMarkets = hourlyMarkets.map(market => {
+        const opportunity = this.calculator.analyzeHourlyMarket(market);
+        return {
+          eventId: market.eventId,
+          title: market.title,
+          upPrice: market.upToken.price,
+          downPrice: market.downToken.price,
+          combinedCost: market.upToken.price + market.downToken.price,
+          hoursLeft: market.hoursUntilClose,
+          isViable: opportunity?.isViable || false,
+          expectedValue: opportunity?.expectedValue || 0,
+        };
+      });
+
       const opportunities = this.calculator.findHourlyOpportunities(hourlyMarkets);
       
       let tradesExecuted = 0;
@@ -165,6 +208,20 @@ export class TradingScheduler {
       lastScanTime: this.lastScanTime?.toISOString() || null,
       schedulerActive: this.cronJob !== null,
     };
+  }
+
+  /**
+   * Get the last scanned live markets
+   */
+  getLiveMarkets(): LiveMarketData[] {
+    return this.lastScannedMarkets;
+  }
+
+  /**
+   * Expose the calculator's analyzeHourlyMarket for the API
+   */
+  getCalculator(): StraddleCalculator {
+    return this.calculator;
   }
 }
 
