@@ -10,17 +10,36 @@ export class TradeDatabase {
   private db: Database.Database;
 
   constructor(dataDir: string) {
-    // Ensure data directory exists
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
+    try {
+      logger.info(`Database initialization starting. Data dir: ${dataDir}`);
+      
+      // Ensure data directory exists
+      if (!fs.existsSync(dataDir)) {
+        logger.info(`Creating data directory: ${dataDir}`);
+        fs.mkdirSync(dataDir, { recursive: true });
+      } else {
+        logger.info(`Data directory already exists: ${dataDir}`);
+      }
 
-    const dbPath = path.join(dataDir, 'trades.db');
-    logger.info(`Opening database at: ${dbPath}`);
-    
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.initializeTables();
+      const dbPath = path.join(dataDir, 'trades.db');
+      logger.info(`Opening database at: ${dbPath}`);
+      
+      this.db = new Database(dbPath);
+      logger.info('Database opened successfully');
+      
+      this.db.pragma('journal_mode = WAL');
+      logger.info('WAL mode enabled');
+      
+      this.initializeTables();
+      logger.info('Database initialization complete');
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`Database constructor error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        logger.error(`Stack: ${error.stack}`);
+      }
+      throw error;
+    }
   }
 
   private initializeTables() {
@@ -78,19 +97,32 @@ export class TradeDatabase {
 
   // Trade operations
   saveTrade(trade: Trade): void {
-    const stmt = this.db.prepare(`
-      INSERT INTO trades (
-        id, market_id, market_question, up_token_id, down_token_id,
-        up_price, down_price, up_size, down_size, combined_cost,
-        status, up_order_id, down_order_id, pnl, created_at, resolved_at
-      ) VALUES (
-        @id, @market_id, @market_question, @up_token_id, @down_token_id,
-        @up_price, @down_price, @up_size, @down_size, @combined_cost,
-        @status, @up_order_id, @down_order_id, @pnl, @created_at, @resolved_at
-      )
-    `);
-    stmt.run(trade);
-    logger.debug(`Trade saved: ${trade.id}`);
+    try {
+      logger.debug(`Preparing to save trade: ${trade.id}`);
+      logger.debug(`Trade data: ${JSON.stringify(trade)}`);
+      
+      const stmt = this.db.prepare(`
+        INSERT INTO trades (
+          id, market_id, market_question, up_token_id, down_token_id,
+          up_price, down_price, up_size, down_size, combined_cost,
+          status, up_order_id, down_order_id, pnl, created_at, resolved_at
+        ) VALUES (
+          @id, @market_id, @market_question, @up_token_id, @down_token_id,
+          @up_price, @down_price, @up_size, @down_size, @combined_cost,
+          @status, @up_order_id, @down_order_id, @pnl, @created_at, @resolved_at
+        )
+      `);
+      
+      const result = stmt.run(trade);
+      logger.info(`Trade saved: ${trade.id} (changes: ${result.changes})`);
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`Database saveTrade error: ${errorMsg}`);
+      if (error instanceof Error && error.stack) {
+        logger.error(`Stack: ${error.stack}`);
+      }
+      throw error; // Re-throw so caller knows it failed
+    }
   }
 
   updateTrade(trade: Trade): void {

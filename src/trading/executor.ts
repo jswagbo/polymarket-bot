@@ -27,7 +27,8 @@ export class TradeExecutor {
     logger.info(`Down Price: $${opportunity.downPrice.toFixed(3)} | Size: ${opportunity.downSize.toFixed(2)}`);
     logger.info(`Combined Cost: $${opportunity.combinedCost.toFixed(3)}`);
 
-    // Create trade record
+    // Create trade record with explicit null values for optional fields
+    // (SQLite needs explicit null, not undefined)
     const trade: Trade = {
       id: tradeId,
       market_id: opportunity.market.condition_id,
@@ -40,7 +41,11 @@ export class TradeExecutor {
       down_size: opportunity.downSize,
       combined_cost: opportunity.combinedCost,
       status: 'pending',
+      up_order_id: null as any,
+      down_order_id: null as any,
+      pnl: null as any,
       created_at: new Date().toISOString(),
+      resolved_at: null as any,
     };
 
     // Save trade to database
@@ -48,8 +53,12 @@ export class TradeExecutor {
       logger.info(`Saving trade ${tradeId} to database...`);
       this.db.saveTrade(trade);
       logger.info(`Trade ${tradeId} saved to database`);
-    } catch (dbError) {
-      logger.error(`Failed to save trade to database:`, dbError);
+    } catch (dbError: any) {
+      const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+      const errorStack = dbError instanceof Error ? dbError.stack : 'No stack';
+      logger.error(`Failed to save trade to database: ${errorMessage}`);
+      logger.error(`Database error stack: ${errorStack}`);
+      logger.error(`Trade data that failed:`, JSON.stringify(trade, null, 2));
       return null;
     }
 
