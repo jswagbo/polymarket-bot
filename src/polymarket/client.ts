@@ -8,8 +8,13 @@ const logger = createLogger('PolymarketClient');
 const CLOB_API_URL = 'https://clob.polymarket.com';
 const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
 
-// Polygon contract addresses - using Ankr public RPC (most reliable free option)
-const POLYGON_RPC = 'https://rpc.ankr.com/polygon';
+// Polygon RPC - try multiple endpoints with fallback
+const POLYGON_RPCS = [
+  'https://polygon-mainnet.public.blastapi.io',
+  'https://polygon-bor-rpc.publicnode.com', 
+  'https://1rpc.io/matic',
+  'https://polygon.drpc.org',
+];
 const USDC_E_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e (bridged) on Polygon
 const USDC_NATIVE_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Native USDC on Polygon
 const CTF_EXCHANGE = '0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E'; // Polymarket CTF Exchange
@@ -438,8 +443,28 @@ export class PolymarketClient {
     logger.info('=== Starting USDC Approval Process ===');
     
     try {
-      logger.info('Connecting to Polygon RPC...');
-      const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC);
+      // Try multiple RPCs until one works
+      let provider: ethers.providers.JsonRpcProvider | null = null;
+      let workingRpc = '';
+      
+      for (const rpc of POLYGON_RPCS) {
+        try {
+          logger.info(`Trying RPC: ${rpc}...`);
+          const testProvider = new ethers.providers.JsonRpcProvider(rpc);
+          // Test the connection
+          const network = await testProvider.getNetwork();
+          logger.info(`✅ Connected to ${rpc} (chainId: ${network.chainId})`);
+          provider = testProvider;
+          workingRpc = rpc;
+          break;
+        } catch (rpcError: any) {
+          logger.warn(`❌ RPC ${rpc} failed: ${rpcError.message}`);
+        }
+      }
+      
+      if (!provider) {
+        throw new Error('All RPC endpoints failed. Please try again later.');
+      }
       const connectedWallet = this.wallet.connect(provider);
       const address = await connectedWallet.getAddress();
       logger.info(`Wallet address: ${address}`);
@@ -581,7 +606,20 @@ export class PolymarketClient {
       throw new Error('No wallet configured');
     }
 
-    const provider = new ethers.providers.JsonRpcProvider(POLYGON_RPC);
+    // Try RPCs until one works
+    let provider: ethers.providers.JsonRpcProvider | null = null;
+    for (const rpc of POLYGON_RPCS) {
+      try {
+        const testProvider = new ethers.providers.JsonRpcProvider(rpc);
+        await testProvider.getNetwork();
+        provider = testProvider;
+        break;
+      } catch {
+        continue;
+      }
+    }
+    if (!provider) throw new Error('All RPC endpoints failed');
+    
     const connectedWallet = this.wallet.connect(provider);
     const address = await connectedWallet.getAddress();
     
