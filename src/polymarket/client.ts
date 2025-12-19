@@ -826,13 +826,20 @@ export class PolymarketClient {
     const connectedWallet = this.wallet.connect(provider);
 
     try {
+      // Get current gas price and add 50% buffer for Polygon
+      const gasPrice = await provider.getGasPrice();
+      const boostedGasPrice = gasPrice.mul(150).div(100);
+      logger.info(`Gas price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} gwei, using ${ethers.utils.formatUnits(boostedGasPrice, 'gwei')} gwei`);
+      
       let tx;
       
       if (isNegRisk) {
         // Use Neg Risk Adapter for neg risk markets
         const adapter = new ethers.Contract(NEG_RISK_ADAPTER, NEG_RISK_ABI, connectedWallet);
-        // For neg risk, we redeem with the amounts (simplified - redeem all)
-        tx = await adapter.redeemPositions(conditionId, [1, 1], { gasLimit: 300000 });
+        tx = await adapter.redeemPositions(conditionId, [1, 1], { 
+          gasLimit: 300000,
+          gasPrice: boostedGasPrice
+        });
       } else {
         // Use CTF contract directly
         const ctf = new ethers.Contract(CTF_CONTRACT, CTF_ABI, connectedWallet);
@@ -843,7 +850,7 @@ export class PolymarketClient {
           parentCollectionId,
           conditionId,
           [1, 2], // Both outcome indices
-          { gasLimit: 300000 }
+          { gasLimit: 300000, gasPrice: boostedGasPrice }
         );
       }
 
