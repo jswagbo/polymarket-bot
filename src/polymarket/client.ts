@@ -826,10 +826,11 @@ export class PolymarketClient {
     const connectedWallet = this.wallet.connect(provider);
 
     try {
-      // Get current gas price and add 50% buffer for Polygon
+      // Get current gas price with minimum floor for Polygon
       const gasPrice = await provider.getGasPrice();
-      const boostedGasPrice = gasPrice.mul(150).div(100);
-      logger.info(`Gas price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} gwei, using ${ethers.utils.formatUnits(boostedGasPrice, 'gwei')} gwei`);
+      const minGasPrice = ethers.utils.parseUnits('50', 'gwei'); // Minimum 50 gwei for Polygon
+      const boostedGasPrice = gasPrice.gt(minGasPrice) ? gasPrice.mul(150).div(100) : minGasPrice;
+      logger.info(`Gas price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} gwei, using ${ethers.utils.formatUnits(boostedGasPrice, 'gwei')} gwei (min 50)`);
       
       let tx;
       
