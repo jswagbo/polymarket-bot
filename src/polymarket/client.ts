@@ -371,35 +371,35 @@ export class PolymarketClient {
       }
 
       // Recalculate size based on new market price
-      // CRITICAL: Polymarket requires EXACTLY 2 decimal places
-      // Use integer math to avoid ALL floating point issues
-      const rawSize = (price * size) / marketPrice;
-      const sizeInCents = Math.floor(rawSize * 100);  // Convert to cents (integer)
-      const finalSize = sizeInCents / 100;  // Back to dollars
+      // CRITICAL: Polymarket requires price * size (makerAmount) to have ≤2 decimals!
+      // Not just price and size individually, but their PRODUCT
       
       const priceInCents = Math.round(marketPrice * 100);  // Convert to cents (integer)
-      const finalPrice = priceInCents / 100;  // Back to dollars
+      const finalPrice = priceInCents / 100;  // Back to dollars (guaranteed 2 decimals)
+      
+      // Calculate how many WHOLE shares we can buy to ensure price * size has ≤2 decimals
+      // By using whole shares, price * wholeShares will have same decimals as price (≤2)
+      const targetSpend = price * size;  // How much we want to spend
+      const wholeShares = Math.floor(targetSpend / finalPrice);  // Round DOWN to whole shares
+      
+      // Verify: finalPrice * wholeShares should have ≤2 decimals
+      const totalCost = finalPrice * wholeShares;
+      const totalCostStr = totalCost.toFixed(2);  // Force 2 decimals
+      const verifiedCost = parseFloat(totalCostStr);
 
       logger.info(`Placing MARKET buy order: token=${tokenId.substring(0, 15)}...`);
-      logger.info(`  Price: ${finalPrice} (${priceInCents} cents), Size: ${finalSize} (${sizeInCents} cents)`);
+      logger.info(`  Price: ${finalPrice}, Size: ${wholeShares} (whole shares)`);
+      logger.info(`  Total cost: $${verifiedCost} (price × size = ${finalPrice} × ${wholeShares})`);
 
-      // Verify decimals before sending
-      const priceStr = finalPrice.toString();
-      const sizeStr = finalSize.toString();
-      const priceDecimals = priceStr.includes('.') ? priceStr.split('.')[1]?.length || 0 : 0;
-      const sizeDecimals = sizeStr.includes('.') ? sizeStr.split('.')[1]?.length || 0 : 0;
-      logger.info(`  Decimal check: price has ${priceDecimals} decimals, size has ${sizeDecimals} decimals`);
-
-      if (priceDecimals > 2 || sizeDecimals > 2) {
-        logger.error(`TOO MANY DECIMALS! price=${priceStr}, size=${sizeStr}`);
-        throw new Error(`Decimal precision error: price=${priceStr}, size=${sizeStr}`);
+      if (wholeShares < 1) {
+        throw new Error(`Order too small: would buy ${wholeShares} shares at $${finalPrice}`);
       }
 
-      // Create order at market price
+      // Create order with whole share count
       const order = await this.client.createOrder({
         tokenID: tokenId,
         price: finalPrice,
-        size: finalSize,
+        size: wholeShares,  // WHOLE SHARES ONLY
         side: Side.BUY,
       });
 
