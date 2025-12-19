@@ -772,14 +772,25 @@ export class PolymarketClient {
       logger.info(`  All keys: ${Object.keys(p).join(', ')}`);
     });
     
-    // Filter for resolved markets with positive balance
+    // Filter for claimable positions using correct API fields
     const claimable = positions.filter((p: any) => {
-      const isResolved = p.market?.resolved || p.outcome?.resolved || p.resolved;
-      const hasBalance = parseFloat(p.size || p.amount || p.shares || '0') > 0;
-      const isWinner = p.outcome?.winner || p.won || p.redeemable;
+      const hasBalance = parseFloat(p.size || '0') > 0;
       
-      logger.info(`  → Claimable check: resolved=${isResolved}, hasBalance=${hasBalance}, isWinner=${isWinner}`);
-      return isResolved && hasBalance && isWinner;
+      // Check if market has ended (endDate in the past)
+      const endDate = p.endDate ? new Date(p.endDate) : null;
+      const isEnded = endDate ? endDate < new Date() : false;
+      
+      // Check if winner: curPrice close to 1 means won, 0 means lost
+      const curPrice = parseFloat(p.curPrice || '0');
+      const isWinner = curPrice >= 0.95;  // Price of 0.95+ means it resolved as winner
+      
+      // Also check redeemable flag if it exists
+      const isRedeemable = p.redeemable === true || p.redeemable === 'true';
+      
+      logger.info(`  → Position: endDate=${endDate?.toISOString()}, isEnded=${isEnded}, curPrice=${curPrice}, isWinner=${isWinner}, redeemable=${p.redeemable}`);
+      
+      // Claimable if: has balance AND (market ended with winning price OR explicitly marked redeemable)
+      return hasBalance && (isEnded && isWinner) || isRedeemable;
     });
 
     logger.info(`Found ${claimable.length} claimable positions out of ${positions.length}`);
@@ -866,8 +877,11 @@ export class PolymarketClient {
     
     for (const position of claimable) {
       try {
-        const conditionId = position.market?.conditionId || position.conditionId;
-        const isNegRisk = position.market?.negRisk || false;
+        const conditionId = position.conditionId;
+        const isNegRisk = position.negativeRisk || position.negRisk || false;
+        
+        logger.info(`Claiming position: conditionId=${conditionId}, negRisk=${isNegRisk}`);
+        logger.info(`  Market: ${position.title}, Outcome: ${position.outcome}, Size: ${position.size}`);
         
         const txHash = await this.redeemPosition(conditionId, isNegRisk);
         results.success++;
