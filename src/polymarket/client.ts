@@ -706,17 +706,37 @@ export class PolymarketClient {
     const address = await this.wallet.getAddress();
     
     try {
-      // Fetch from Gamma API (user positions endpoint)
-      const response = await fetch(`${GAMMA_API_URL}/positions?user=${address.toLowerCase()}`);
-      
-      if (!response.ok) {
-        logger.warn(`Failed to fetch positions from API: ${response.status}`);
-        return [];
+      // Try CLOB API first (if authenticated)
+      if (this.client && this.apiCreds) {
+        try {
+          const clobPositions = await this.client.getBalanceAllowance();
+          logger.info(`CLOB balance/allowance response:`, clobPositions);
+        } catch (clobErr) {
+          logger.debug(`CLOB positions not available: ${clobErr}`);
+        }
       }
-
-      const positions = await response.json() as any[];
-      logger.info(`Found ${positions.length} positions for ${address}`);
-      return positions;
+      
+      // Try data-api endpoint (public positions)
+      const dataApiUrl = `https://data-api.polymarket.com/positions?user=${address.toLowerCase()}`;
+      const response = await fetch(dataApiUrl);
+      
+      if (response.ok) {
+        const positions = await response.json() as any[];
+        logger.info(`Found ${positions.length} positions for ${address} from data-api`);
+        return positions;
+      }
+      
+      // Fallback to gamma-api
+      const gammaResponse = await fetch(`${GAMMA_API_URL}/positions?user=${address.toLowerCase()}`);
+      
+      if (gammaResponse.ok) {
+        const positions = await gammaResponse.json() as any[];
+        logger.info(`Found ${positions.length} positions for ${address} from gamma-api`);
+        return positions;
+      }
+      
+      logger.warn(`Failed to fetch positions from APIs: data-api=${response.status}, gamma-api=${gammaResponse.status}`);
+      return [];
     } catch (error: any) {
       logger.error(`Failed to fetch positions: ${error.message}`);
       return [];
