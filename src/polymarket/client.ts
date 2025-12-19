@@ -845,9 +845,13 @@ export class PolymarketClient {
         // Use CTF contract directly
         const ctf = new ethers.Contract(CTF_CONTRACT, CTF_ABI, connectedWallet);
         const parentCollectionId = ethers.constants.HashZero; // Root collection
-        // Index sets for binary outcome: [1, 2] means both outcomes
+        
+        // IMPORTANT: Polymarket uses USDC.e as collateral, not native USDC
+        // Index sets: 1 = outcome 0 (Up/Yes), 2 = outcome 1 (Down/No)
+        logger.info(`Redeeming with USDC.e collateral: ${USDC_E_ADDRESS}`);
+        
         tx = await ctf.redeemPositions(
-          USDC_NATIVE_ADDRESS, // Collateral token
+          USDC_E_ADDRESS, // USDC.e - Polymarket's collateral token
           parentCollectionId,
           conditionId,
           [1, 2], // Both outcome indices
