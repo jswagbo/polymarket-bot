@@ -23,12 +23,16 @@ export interface LiveMarketData {
 
 export class TradingScheduler {
   private cronJob: cron.ScheduledTask | null = null;
+  private claimJob: cron.ScheduledTask | null = null;
   private isRunning = false;
+  private isClaimRunning = false;
   private lastScanTime: Date | null = null;
+  private lastClaimTime: Date | null = null;
   private lastScannedMarkets: LiveMarketData[] = [];
   private scanner: MarketScanner;
   private calculator: StraddleCalculator;
   private executor: TradeExecutor;
+  private autoClaimEnabled = true;
 
   constructor(
     private client: PolymarketClient,
@@ -58,6 +62,12 @@ export class TradingScheduler {
       await this.runScan();
     });
 
+    // Start auto-claim job (runs every 15 minutes)
+    this.claimJob = cron.schedule('*/15 * * * *', async () => {
+      await this.runAutoClaim();
+    });
+    logger.info('Auto-claim scheduler started (every 15 minutes)');
+
     // Run an initial scan immediately
     this.runScan();
   }
@@ -69,8 +79,80 @@ export class TradingScheduler {
     if (this.cronJob) {
       this.cronJob.stop();
       this.cronJob = null;
-      logger.info('Scheduler stopped');
+      logger.info('Trading scheduler stopped');
     }
+    if (this.claimJob) {
+      this.claimJob.stop();
+      this.claimJob = null;
+      logger.info('Auto-claim scheduler stopped');
+    }
+  }
+
+  /**
+   * Run auto-claim for resolved winning positions
+   */
+  async runAutoClaim(): Promise<void> {
+    if (this.isClaimRunning) {
+      logger.debug('Auto-claim already in progress, skipping...');
+      return;
+    }
+
+    if (!this.autoClaimEnabled || this.client.isReadOnly()) {
+      logger.debug('Auto-claim disabled or in read-only mode, skipping...');
+      return;
+    }
+
+    this.isClaimRunning = true;
+    this.lastClaimTime = new Date();
+    logger.info('=== STARTING AUTO-CLAIM CHECK ===');
+
+    try {
+      // Get claimable positions
+      const claimable = await this.client.getClaimablePositions();
+      
+      if (claimable.length === 0) {
+        logger.info('No claimable positions found');
+        return;
+      }
+
+      logger.info(`Found ${claimable.length} claimable position(s), attempting to claim...`);
+      
+      const result = await this.client.claimAllWinnings();
+      
+      if (result.success > 0) {
+        logger.info(`✅ AUTO-CLAIM COMPLETE: ${result.success} position(s) claimed!`);
+        result.txHashes.forEach(hash => {
+          logger.info(`  Transaction: https://polygonscan.com/tx/${hash}`);
+        });
+      }
+      
+      if (result.failed > 0) {
+        logger.warn(`⚠️ ${result.failed} position(s) failed to claim`);
+      }
+
+    } catch (error) {
+      logger.error('Auto-claim failed:', error);
+    } finally {
+      this.isClaimRunning = false;
+    }
+  }
+
+  /**
+   * Toggle auto-claim feature
+   */
+  setAutoClaim(enabled: boolean): void {
+    this.autoClaimEnabled = enabled;
+    logger.info(`Auto-claim ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Get auto-claim status
+   */
+  getAutoClaimStatus(): { enabled: boolean; lastClaimTime: string | null } {
+    return {
+      enabled: this.autoClaimEnabled,
+      lastClaimTime: this.lastClaimTime?.toISOString() || null,
+    };
   }
 
   /**
@@ -230,11 +312,15 @@ export class TradingScheduler {
     isRunning: boolean;
     lastScanTime: string | null;
     schedulerActive: boolean;
+    autoClaimEnabled: boolean;
+    lastClaimTime: string | null;
   } {
     return {
       isRunning: this.isRunning,
       lastScanTime: this.lastScanTime?.toISOString() || null,
       schedulerActive: this.cronJob !== null,
+      autoClaimEnabled: this.autoClaimEnabled,
+      lastClaimTime: this.lastClaimTime?.toISOString() || null,
     };
   }
 
