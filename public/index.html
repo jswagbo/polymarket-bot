@@ -748,6 +748,343 @@
       color: var(--text-secondary);
       text-transform: uppercase;
     }
+
+    /* Analytics Dashboard */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1200px) {
+      .analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 600px) {
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .analytics-stat {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .analytics-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .analytics-stat-value.positive {
+      color: var(--success);
+    }
+
+    .analytics-stat-value.negative {
+      color: var(--danger);
+    }
+
+    .analytics-stat-value.neutral {
+      color: var(--accent-primary);
+    }
+
+    .analytics-stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Charts */
+    .chart-container {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .chart-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    /* P&L Bar Chart */
+    .pnl-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 120px;
+      gap: 4px;
+      padding-top: 20px;
+      position: relative;
+    }
+
+    .pnl-chart::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .pnl-bar-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      position: relative;
+    }
+
+    .pnl-bar {
+      width: 100%;
+      max-width: 24px;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .pnl-bar.positive {
+      background: linear-gradient(to top, var(--success), #00ff99);
+      align-self: flex-end;
+    }
+
+    .pnl-bar.negative {
+      background: linear-gradient(to bottom, var(--danger), #ff6688);
+      align-self: flex-start;
+    }
+
+    .pnl-bar:hover {
+      opacity: 0.8;
+      transform: scaleX(1.1);
+    }
+
+    .pnl-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+
+    /* Win Rate Ring */
+    .win-rate-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+    }
+
+    .win-rate-ring {
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+
+    .win-rate-ring svg {
+      transform: rotate(-90deg);
+    }
+
+    .win-rate-ring circle {
+      fill: none;
+      stroke-width: 10;
+    }
+
+    .win-rate-ring .bg {
+      stroke: var(--bg-hover);
+    }
+
+    .win-rate-ring .progress {
+      stroke: var(--success);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease;
+    }
+
+    .win-rate-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .win-rate-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--success);
+    }
+
+    .win-rate-label {
+      font-size: 0.65rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .win-loss-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .win-loss-stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .win-loss-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .win-loss-dot.win {
+      background: var(--success);
+    }
+
+    .win-loss-dot.loss {
+      background: var(--danger);
+    }
+
+    .win-loss-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      min-width: 32px;
+    }
+
+    .win-loss-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Side Performance */
+    .side-performance {
+      display: flex;
+      gap: 16px;
+    }
+
+    .side-stat {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .side-stat.up {
+      border-left: 3px solid var(--success);
+    }
+
+    .side-stat.down {
+      border-left: 3px solid var(--danger);
+    }
+
+    .side-stat-title {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .side-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .side-stat-detail {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Hour Heatmap */
+    .hour-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 4px;
+    }
+
+    .hour-cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .hour-cell:hover {
+      transform: scale(1.1);
+    }
+
+    .hour-cell.intensity-0 { background: var(--bg-hover); }
+    .hour-cell.intensity-1 { background: rgba(0, 221, 136, 0.2); color: var(--text-primary); }
+    .hour-cell.intensity-2 { background: rgba(0, 221, 136, 0.4); color: var(--text-primary); }
+    .hour-cell.intensity-3 { background: rgba(0, 221, 136, 0.6); color: var(--bg-primary); }
+    .hour-cell.intensity-4 { background: rgba(0, 221, 136, 0.8); color: var(--bg-primary); }
+    .hour-cell.intensity-5 { background: var(--success); color: var(--bg-primary); }
+
+    .analytics-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .analytics-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tab-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-glow);
+      color: var(--accent-primary);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -794,6 +1131,110 @@
         <span class="stat-icon">⏱️</span>
         <div class="stat-value" id="lastScan">--</div>
         <div class="stat-label">Last Scan</div>
+      </div>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">📊 Analytics Dashboard</h2>
+        <button class="btn btn-secondary" id="refreshAnalyticsBtn">🔄 Refresh</button>
+      </div>
+      
+      <!-- Analytics Stats Row -->
+      <div class="analytics-grid" id="analyticsStats">
+        <div class="analytics-stat">
+          <div class="analytics-stat-value neutral" id="analyticsWinRate">--</div>
+          <div class="analytics-stat-label">Win Rate</div>
+        </div>
+        <div class="analytics-stat">
+          <div class="analytics-stat-value positive" id="analyticsAvgProfit">--</div>
+          <div class="analytics-stat-label">Avg Win</div>
+        </div>
+        <div class="analytics-stat">
+          <div class="analytics-stat-value negative" id="analyticsAvgLoss">--</div>
+          <div class="analytics-stat-label">Avg Loss</div>
+        </div>
+        <div class="analytics-stat">
+          <div class="analytics-stat-value neutral" id="analyticsProfitFactor">--</div>
+          <div class="analytics-stat-label">Profit Factor</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="analytics-row">
+        <!-- Win Rate Ring -->
+        <div class="chart-container">
+          <div class="chart-title">📈 Win/Loss Distribution</div>
+          <div class="win-rate-container">
+            <div class="win-rate-ring">
+              <svg width="120" height="120">
+                <circle class="bg" cx="60" cy="60" r="50"/>
+                <circle class="progress" id="winRateProgress" cx="60" cy="60" r="50" 
+                  stroke-dasharray="314" stroke-dashoffset="314"/>
+              </svg>
+              <div class="win-rate-text">
+                <div class="win-rate-value" id="winRateValue">0%</div>
+                <div class="win-rate-label">Win Rate</div>
+              </div>
+            </div>
+            <div class="win-loss-stats">
+              <div class="win-loss-stat">
+                <span class="win-loss-dot win"></span>
+                <span class="win-loss-count" id="totalWins">0</span>
+                <span class="win-loss-label">Wins</span>
+              </div>
+              <div class="win-loss-stat">
+                <span class="win-loss-dot loss"></span>
+                <span class="win-loss-count" id="totalLosses">0</span>
+                <span class="win-loss-label">Losses</span>
+              </div>
+              <div class="win-loss-stat" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Best:</span>
+                <span class="win-loss-count positive" id="largestWin" style="color: var(--success);">$0</span>
+              </div>
+              <div class="win-loss-stat">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Worst:</span>
+                <span class="win-loss-count negative" id="largestLoss" style="color: var(--danger);">$0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side Performance -->
+        <div class="chart-container">
+          <div class="chart-title">⬆️⬇️ Performance by Side</div>
+          <div class="side-performance" id="sidePerformance">
+            <div class="side-stat up">
+              <div class="side-stat-title">UP Trades</div>
+              <div class="side-stat-value" id="upPnL">$0.00</div>
+              <div class="side-stat-detail" id="upWinRate">0/0 wins</div>
+            </div>
+            <div class="side-stat down">
+              <div class="side-stat-title">DOWN Trades</div>
+              <div class="side-stat-value" id="downPnL">$0.00</div>
+              <div class="side-stat-detail" id="downWinRate">0/0 wins</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P&L Chart -->
+      <div class="chart-container">
+        <div class="chart-title">💹 Daily P&L (Last 30 Days)</div>
+        <div class="pnl-chart" id="pnlChart">
+          <div class="empty-state" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <p style="color: var(--text-muted); font-size: 0.875rem;">No trade data yet</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hour Heatmap -->
+      <div class="chart-container">
+        <div class="chart-title">🕐 Trades by Hour (UTC)</div>
+        <div class="hour-grid" id="hourGrid">
+          <!-- Generated by JS -->
+        </div>
       </div>
     </div>
 
@@ -907,6 +1348,7 @@
     document.getElementById('refreshMarketsBtn').addEventListener('click', fetchLiveMarkets);
     document.getElementById('refreshPositionsBtn').addEventListener('click', fetchPositions);
     document.getElementById('claimAllBtn').addEventListener('click', claimAllWinnings);
+    document.getElementById('refreshAnalyticsBtn').addEventListener('click', fetchAnalytics);
 
     // API Functions
     async function apiCall(endpoint, method = 'GET', body = null) {
@@ -943,9 +1385,10 @@
       try {
         const { data } = await apiCall('/stats');
         updateDashboard(data);
-        // Also fetch live markets and positions
+        // Also fetch live markets, positions, and analytics
         fetchLiveMarkets();
         fetchPositions();
+        fetchAnalytics();
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       }
@@ -977,6 +1420,123 @@
         btn.disabled = false;
         btn.innerHTML = '🔄 Refresh';
       }
+    }
+
+    async function fetchAnalytics() {
+      try {
+        const { data } = await apiCall('/analytics');
+        renderAnalytics(data);
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+      }
+    }
+
+    function renderAnalytics(data) {
+      // Update stats cards
+      document.getElementById('analyticsWinRate').textContent = `${data.winRate}%`;
+      document.getElementById('analyticsAvgProfit').textContent = `$${data.avgProfit?.toFixed(2) || '0.00'}`;
+      document.getElementById('analyticsAvgLoss').textContent = `$${data.avgLoss?.toFixed(2) || '0.00'}`;
+      document.getElementById('analyticsProfitFactor').textContent = 
+        data.profitFactor === Infinity ? '∞' : (data.profitFactor?.toFixed(2) || '0.00');
+
+      // Update win rate ring
+      const winRateProgress = document.getElementById('winRateProgress');
+      const circumference = 2 * Math.PI * 50;
+      const offset = circumference - (data.winRate / 100) * circumference;
+      winRateProgress.style.strokeDasharray = circumference;
+      winRateProgress.style.strokeDashoffset = offset;
+      document.getElementById('winRateValue').textContent = `${data.winRate}%`;
+
+      // Update win/loss counts
+      document.getElementById('totalWins').textContent = data.totalWins || 0;
+      document.getElementById('totalLosses').textContent = data.totalLosses || 0;
+      document.getElementById('largestWin').textContent = `$${data.largestWin?.toFixed(2) || '0.00'}`;
+      document.getElementById('largestLoss').textContent = `$${data.largestLoss?.toFixed(2) || '0.00'}`;
+
+      // Update side performance
+      if (data.tradesBySide && data.tradesBySide.length > 0) {
+        const upSide = data.tradesBySide.find(s => s.side === 'up') || { count: 0, wins: 0, pnl: 0 };
+        const downSide = data.tradesBySide.find(s => s.side === 'down') || { count: 0, wins: 0, pnl: 0 };
+
+        const upPnlEl = document.getElementById('upPnL');
+        upPnlEl.textContent = `$${upSide.pnl?.toFixed(2) || '0.00'}`;
+        upPnlEl.className = `side-stat-value ${upSide.pnl >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('upWinRate').textContent = `${upSide.wins}/${upSide.count} wins`;
+
+        const downPnlEl = document.getElementById('downPnL');
+        downPnlEl.textContent = `$${downSide.pnl?.toFixed(2) || '0.00'}`;
+        downPnlEl.className = `side-stat-value ${downSide.pnl >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('downWinRate').textContent = `${downSide.wins}/${downSide.count} wins`;
+      }
+
+      // Render P&L chart
+      renderPnLChart(data.tradesByDay || []);
+
+      // Render hour heatmap
+      renderHourGrid(data.tradesByHour || []);
+    }
+
+    function renderPnLChart(tradesByDay) {
+      const container = document.getElementById('pnlChart');
+      
+      if (!tradesByDay || tradesByDay.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <p style="color: var(--text-muted); font-size: 0.875rem;">No trade data yet</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Find max absolute value for scaling
+      const maxAbs = Math.max(...tradesByDay.map(d => Math.abs(d.pnl)), 1);
+      const maxHeight = 50; // Max height in pixels from center
+
+      let html = '';
+      tradesByDay.forEach(day => {
+        const isPositive = day.pnl >= 0;
+        const height = Math.abs(day.pnl) / maxAbs * maxHeight;
+        const date = new Date(day.date);
+        const label = `${date.getMonth() + 1}/${date.getDate()}`;
+        
+        html += `
+          <div class="pnl-bar-container" title="${label}: $${day.pnl.toFixed(2)} (${day.count} trades)">
+            <div class="pnl-bar ${isPositive ? 'positive' : 'negative'}" 
+              style="height: ${Math.max(height, 3)}px; ${isPositive ? 'margin-bottom: 60px;' : 'margin-top: 60px;'}"></div>
+            <div class="pnl-label">${label}</div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderHourGrid(tradesByHour) {
+      const container = document.getElementById('hourGrid');
+      
+      // Create all 24 hours
+      const hourMap = {};
+      tradesByHour.forEach(h => {
+        hourMap[h.hour] = h;
+      });
+
+      const maxTrades = Math.max(...tradesByHour.map(h => h.count), 1);
+      
+      let html = '';
+      for (let i = 0; i < 24; i++) {
+        const hourData = hourMap[i] || { count: 0, wins: 0 };
+        const intensity = Math.min(Math.floor((hourData.count / maxTrades) * 5), 5);
+        const winRate = hourData.count > 0 ? Math.round((hourData.wins / hourData.count) * 100) : 0;
+        
+        html += `
+          <div class="hour-cell intensity-${intensity}" 
+            title="Hour ${i}:00 UTC\n${hourData.count} trades\n${winRate}% win rate">
+            ${i}
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
     }
 
     async function claimAllWinnings() {

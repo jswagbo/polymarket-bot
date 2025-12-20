@@ -301,6 +301,17 @@ export function createServer(
     }
   });
 
+  // Get analytics
+  app.get('/api/analytics', (req: Request, res: Response) => {
+    try {
+      const analytics = db.getAnalytics();
+      res.json({ success: true, data: analytics });
+    } catch (error) {
+      logger.error('Failed to get analytics', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
   // Get trades
   app.get('/api/trades', (req: Request, res: Response) => {
     try {

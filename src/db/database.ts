@@ -239,6 +239,92 @@ export class TradeDatabase {
     };
   }
 
+  // Advanced Analytics
+  getAnalytics(): {
+    winRate: number;
+    avgProfit: number;
+    avgLoss: number;
+    totalWins: number;
+    totalLosses: number;
+    largestWin: number;
+    largestLoss: number;
+    profitFactor: number;
+    tradesByDay: { date: string; count: number; pnl: number }[];
+    tradesBySide: { side: string; count: number; wins: number; pnl: number }[];
+    tradesByHour: { hour: number; count: number; wins: number }[];
+  } {
+    // Win/Loss stats
+    const winLoss = this.db.prepare(`
+      SELECT
+        COUNT(CASE WHEN pnl > 0 THEN 1 END) as wins,
+        COUNT(CASE WHEN pnl < 0 THEN 1 END) as losses,
+        COUNT(CASE WHEN pnl = 0 THEN 1 END) as breakeven,
+        AVG(CASE WHEN pnl > 0 THEN pnl END) as avgProfit,
+        AVG(CASE WHEN pnl < 0 THEN pnl END) as avgLoss,
+        MAX(pnl) as largestWin,
+        MIN(pnl) as largestLoss,
+        SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END) as totalProfit,
+        ABS(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)) as totalLoss
+      FROM trades
+      WHERE status = 'resolved' AND pnl IS NOT NULL
+    `).get() as any;
+
+    // Trades by day (last 30 days)
+    const byDay = this.db.prepare(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as count,
+        COALESCE(SUM(pnl), 0) as pnl
+      FROM trades
+      WHERE created_at >= datetime('now', '-30 days')
+      GROUP BY DATE(created_at)
+      ORDER BY date DESC
+      LIMIT 30
+    `).all() as { date: string; count: number; pnl: number }[];
+
+    // Trades by side
+    const bySide = this.db.prepare(`
+      SELECT 
+        COALESCE(side, 'unknown') as side,
+        COUNT(*) as count,
+        SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins,
+        COALESCE(SUM(pnl), 0) as pnl
+      FROM trades
+      WHERE status = 'resolved'
+      GROUP BY side
+    `).all() as { side: string; count: number; wins: number; pnl: number }[];
+
+    // Trades by hour of day
+    const byHour = this.db.prepare(`
+      SELECT 
+        CAST(strftime('%H', created_at) AS INTEGER) as hour,
+        COUNT(*) as count,
+        SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins
+      FROM trades
+      WHERE status = 'resolved'
+      GROUP BY hour
+      ORDER BY hour
+    `).all() as { hour: number; count: number; wins: number }[];
+
+    const totalResolved = (winLoss.wins || 0) + (winLoss.losses || 0);
+    const winRate = totalResolved > 0 ? (winLoss.wins / totalResolved) * 100 : 0;
+    const profitFactor = winLoss.totalLoss > 0 ? winLoss.totalProfit / winLoss.totalLoss : winLoss.totalProfit > 0 ? Infinity : 0;
+
+    return {
+      winRate: Math.round(winRate * 10) / 10,
+      avgProfit: winLoss.avgProfit || 0,
+      avgLoss: winLoss.avgLoss || 0,
+      totalWins: winLoss.wins || 0,
+      totalLosses: winLoss.losses || 0,
+      largestWin: winLoss.largestWin || 0,
+      largestLoss: winLoss.largestLoss || 0,
+      profitFactor: Math.round(profitFactor * 100) / 100,
+      tradesByDay: byDay.reverse(),
+      tradesBySide: bySide,
+      tradesByHour: byHour,
+    };
+  }
+
   // Bot state operations
   setState(key: string, value: string): void {
     const stmt = this.db.prepare(`
