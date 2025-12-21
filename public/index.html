@@ -1291,11 +1291,23 @@
     <div class="main-tabs">
       <button class="main-tab active" data-tab="btc">
         <span class="tab-icon">₿</span>
-        <span>BTC 70¢ Strategy</span>
+        <span>BTC</span>
+      </button>
+      <button class="main-tab" data-tab="eth">
+        <span class="tab-icon">Ξ</span>
+        <span>ETH</span>
+      </button>
+      <button class="main-tab" data-tab="xrp">
+        <span class="tab-icon">✕</span>
+        <span>XRP</span>
+      </button>
+      <button class="main-tab" data-tab="sol">
+        <span class="tab-icon">◎</span>
+        <span>SOL</span>
       </button>
       <button class="main-tab" data-tab="weather">
         <span class="tab-icon">🌤️</span>
-        <span>Weather Bot</span>
+        <span>Weather</span>
       </button>
     </div>
 
@@ -1425,6 +1437,90 @@
     </div>
 
     </div><!-- End BTC Panel -->
+
+    <!-- ETH Bot Tab Panel -->
+    <div id="eth-panel" class="tab-panel">
+      <!-- ETH Live Markets -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <h2 class="card-title">📡 ETH Live Markets (70¢ Strategy)</h2>
+          <button class="btn btn-primary" onclick="forceScanCrypto('ETH')">🔍 Scan ETH</button>
+        </div>
+        <div id="ethMarketsContainer">
+          <div class="empty-state">
+            <div class="empty-state-icon">Ξ</div>
+            <p>No ETH market data yet. Click "Scan ETH" to fetch live Ethereum Up/Down markets.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ℹ️ About Ethereum Markets</h2>
+        </div>
+        <div style="padding: 16px; color: var(--text-secondary); line-height: 1.6;">
+          <p>Ethereum Up or Down markets resolve based on <strong>ETH/USDT</strong> price on Binance.</p>
+          <p style="margin-top: 12px;">The bot uses the same 70¢ strategy: buy when either Up or Down hits ≥70¢ (expected ~98% win rate).</p>
+          <p style="margin-top: 12px;"><a href="https://polymarket.com/event/ethereum-up-or-down-december-21-10am-et" target="_blank" style="color: var(--accent-primary);">View on Polymarket →</a></p>
+        </div>
+      </div>
+    </div><!-- End ETH Panel -->
+
+    <!-- XRP Bot Tab Panel -->
+    <div id="xrp-panel" class="tab-panel">
+      <!-- XRP Live Markets -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <h2 class="card-title">📡 XRP Live Markets (70¢ Strategy)</h2>
+          <button class="btn btn-primary" onclick="forceScanCrypto('XRP')">🔍 Scan XRP</button>
+        </div>
+        <div id="xrpMarketsContainer">
+          <div class="empty-state">
+            <div class="empty-state-icon">✕</div>
+            <p>No XRP market data yet. Click "Scan XRP" to fetch live XRP Up/Down markets.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ℹ️ About XRP Markets</h2>
+        </div>
+        <div style="padding: 16px; color: var(--text-secondary); line-height: 1.6;">
+          <p>XRP Up or Down markets resolve based on <strong>XRP/USDT</strong> price on Binance.</p>
+          <p style="margin-top: 12px;">The bot uses the same 70¢ strategy: buy when either Up or Down hits ≥70¢ (expected ~98% win rate).</p>
+          <p style="margin-top: 12px;"><a href="https://polymarket.com/event/xrp-up-or-down-december-21-10am-et" target="_blank" style="color: var(--accent-primary);">View on Polymarket →</a></p>
+        </div>
+      </div>
+    </div><!-- End XRP Panel -->
+
+    <!-- SOL Bot Tab Panel -->
+    <div id="sol-panel" class="tab-panel">
+      <!-- SOL Live Markets -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <h2 class="card-title">📡 SOL Live Markets (70¢ Strategy)</h2>
+          <button class="btn btn-primary" onclick="forceScanCrypto('SOL')">🔍 Scan SOL</button>
+        </div>
+        <div id="solMarketsContainer">
+          <div class="empty-state">
+            <div class="empty-state-icon">◎</div>
+            <p>No SOL market data yet. Click "Scan SOL" to fetch live Solana Up/Down markets.</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ℹ️ About Solana Markets</h2>
+        </div>
+        <div style="padding: 16px; color: var(--text-secondary); line-height: 1.6;">
+          <p>Solana Up or Down markets resolve based on <strong>SOL/USDT</strong> price on Binance.</p>
+          <p style="margin-top: 12px;">The bot uses the same 70¢ strategy: buy when either Up or Down hits ≥70¢ (expected ~98% win rate).</p>
+          <p style="margin-top: 12px;"><a href="https://polymarket.com/event/solana-up-or-down-december-21-10am-et" target="_blank" style="color: var(--accent-primary);">View on Polymarket →</a></p>
+        </div>
+      </div>
+    </div><!-- End SOL Panel -->
 
     <!-- Weather Bot Tab Panel -->
     <div id="weather-panel" class="tab-panel">
@@ -1620,8 +1716,8 @@
       try {
         const { data } = await apiCall('/stats');
         updateDashboard(data);
-        // Also fetch live markets and positions
-        fetchLiveMarkets();
+        // Also fetch live markets for all cryptos and positions
+        fetchAllCryptoMarkets();
         fetchPositions();
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -2144,6 +2240,9 @@
     // TAB SWITCHING
     // ============================================
     
+    // Supported crypto tabs
+    const CRYPTO_TABS = ['btc', 'eth', 'xrp', 'sol'];
+    
     function switchTab(tabId) {
       // Update tab buttons
       document.querySelectorAll('.main-tab').forEach(tab => {
@@ -2158,6 +2257,112 @@
       // Fetch data for the active tab
       if (tabId === 'weather') {
         fetchWeatherStatus();
+      } else if (CRYPTO_TABS.includes(tabId) && tabId !== 'btc') {
+        // Fetch markets for the selected crypto
+        fetchCryptoMarkets(tabId.toUpperCase());
+      }
+    }
+    
+    // ============================================
+    // MULTI-CRYPTO FUNCTIONS
+    // ============================================
+    
+    async function fetchCryptoMarkets(crypto) {
+      try {
+        const containerId = `${crypto.toLowerCase()}MarketsContainer`;
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const { data } = await apiCall(`/markets/live/${crypto}`);
+        renderCryptoMarkets(crypto, data);
+      } catch (error) {
+        console.error(`Failed to fetch ${crypto} markets:`, error);
+      }
+    }
+    
+    function renderCryptoMarkets(crypto, markets) {
+      const containerId = `${crypto.toLowerCase()}MarketsContainer`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      if (!markets || markets.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">${getCryptoIcon(crypto)}</div>
+            <p>No ${crypto} markets found. Markets may be closed or not yet available.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="markets-grid">
+          ${markets.map(m => `
+            <div class="market-card ${m.isViable ? 'viable' : ''}">
+              <div class="market-header">
+                <span class="market-title" title="${m.title}">${m.title}</span>
+                <span class="market-time">${m.hoursLeft.toFixed(1)}h left</span>
+              </div>
+              <div class="market-prices">
+                <div class="price-box ${m.viableSide === 'up' ? 'highlight' : ''}">
+                  <span class="price-label">📈 UP</span>
+                  <span class="price-value">${(m.upPrice * 100).toFixed(1)}¢</span>
+                </div>
+                <div class="price-box ${m.viableSide === 'down' ? 'highlight' : ''}">
+                  <span class="price-label">📉 DOWN</span>
+                  <span class="price-value">${(m.downPrice * 100).toFixed(1)}¢</span>
+                </div>
+              </div>
+              <div class="market-footer">
+                <span class="combined-cost">Combined: ${(m.combinedCost * 100).toFixed(1)}¢</span>
+                ${m.isViable ? `
+                  <span class="viable-badge">
+                    ✨ Buy ${m.viableSide.toUpperCase()} @ ${((m.viableSide === 'up' ? m.upPrice : m.downPrice) * 100).toFixed(0)}¢
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    function getCryptoIcon(crypto) {
+      const icons = { BTC: '₿', ETH: 'Ξ', XRP: '✕', SOL: '◎' };
+      return icons[crypto] || '🪙';
+    }
+    
+    async function forceScanCrypto(crypto) {
+      try {
+        showToast(`Scanning ${crypto} markets...`, 'success');
+        const { data } = await apiCall(`/bot/scan/${crypto}`, 'POST');
+        showToast(`${crypto} scan complete! Found ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
+        
+        // Refresh the markets display
+        await fetchCryptoMarkets(crypto);
+      } catch (error) {
+        showToast(`Failed to scan ${crypto}: ${error.message}`, 'error');
+      }
+    }
+    
+    // Fetch all crypto markets on load
+    async function fetchAllCryptoMarkets() {
+      try {
+        const { data, supportedCryptos } = await apiCall('/markets/live-all');
+        
+        // Update BTC markets (main panel)
+        if (data.BTC) {
+          renderLiveMarkets(data.BTC);
+        }
+        
+        // Update other crypto markets
+        ['ETH', 'XRP', 'SOL'].forEach(crypto => {
+          if (data[crypto]) {
+            renderCryptoMarkets(crypto, data[crypto]);
+          }
+        });
+      } catch (error) {
+        console.error('Failed to fetch all crypto markets:', error);
       }
     }
 

@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { PolymarketClient } from '../polymarket/client';
+import { PolymarketClient, CryptoType, CRYPTO_DISPLAY_NAMES } from '../polymarket/client';
 import { MarketScanner } from '../polymarket/markets';
 import { StraddleCalculator } from '../trading/straddle';
 import { TradeExecutor } from '../trading/executor';
@@ -8,6 +8,9 @@ import { RuntimeConfig } from '../config';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Scheduler');
+
+// Supported crypto types for the 70¢ strategy
+export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH', 'XRP', 'SOL'];
 
 export interface LiveMarketData {
   eventId: string;
@@ -28,7 +31,10 @@ export class TradingScheduler {
   private isClaimRunning = false;
   private lastScanTime: Date | null = null;
   private lastClaimTime: Date | null = null;
-  private lastScannedMarkets: LiveMarketData[] = [];
+  
+  // Store market data for each crypto separately
+  private marketDataByCrypto: Map<CryptoType, LiveMarketData[]> = new Map();
+  
   private scanner: MarketScanner;
   private calculator: StraddleCalculator;
   private executor: TradeExecutor;
@@ -183,7 +189,7 @@ export class TradingScheduler {
   }
 
   /**
-   * Run a single market scan and execute trades
+   * Run a single market scan and execute trades for ALL crypto types
    * NEW STRATEGY: Buy expensive side (≥70¢) only
    */
   async runScan(): Promise<void> {
@@ -199,7 +205,7 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('=== STARTING MARKET SCAN (Single-Leg Strategy: Buy ≥70¢) ===');
+    logger.info('=== STARTING MULTI-CRYPTO MARKET SCAN (Single-Leg Strategy: Buy ≥70¢) ===');
 
     try {
       // Update calculator config in case it changed
@@ -208,69 +214,79 @@ export class TradingScheduler {
         maxCombinedCost: this.runtimeConfig.maxCombinedCost,
       });
 
-      // Scan for hourly BTC Up/Down markets
-      logger.info('Fetching hourly BTC markets from Gamma API...');
-      const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
-      logger.info(`Found ${hourlyMarkets.length} hourly BTC markets`);
-
-      // Store live market data for dashboard
-      logger.info('Building live market data for dashboard...');
-      this.lastScannedMarkets = hourlyMarkets.map(market => {
-        const analysis = this.calculator.analyzeHourlyMarket(market);
-        return {
-          eventId: market.eventId,
-          title: market.title,
-          upPrice: analysis.upPrice,
-          downPrice: analysis.downPrice,
-          combinedCost: analysis.combinedCost,
-          hoursLeft: market.hoursUntilClose,
-          isViable: analysis.isViable,
-          viableSide: analysis.viableSide,
-          expectedValue: analysis.expectedValue,
-        };
-      });
-      logger.info(`Built ${this.lastScannedMarkets.length} live market entries`);
-
-      // Find single-leg opportunities (≥70¢ on either side)
-      logger.info('Finding single-leg opportunities (≥70¢)...');
-      const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
-      logger.info(`Found ${opportunities.length} markets with expensive side (≥70¢)`);
-
-      // Execute trades - ONLY in trading window (last 30 minutes of hour)
-      let tradesExecuted = 0;
+      let totalMarkets = 0;
+      let totalOpportunities = 0;
+      let totalTradesExecuted = 0;
       const inTradingWindow = this.isInTradingWindow();
       const currentMinute = new Date().getMinutes();
-      
-      if (opportunities.length > 0) {
-        if (!inTradingWindow) {
-          const minutesUntil = this.getMinutesUntilTradingWindow();
-          logger.info(`⏰ ${opportunities.length} opportunity(ies) found, but outside trading window (minute ${currentMinute})`);
-          logger.info(`   Trading window: minutes ${this.tradingWindowStart}-${this.tradingWindowEnd}. Opens in ${minutesUntil} minutes.`);
-        } else {
-          logger.info(`✅ IN TRADING WINDOW (minute ${currentMinute}) - Attempting to execute ${opportunities.length} trade(s)...`);
-          logger.info(`Client read-only mode: ${this.client.isReadOnly()}`);
+
+      // Scan each crypto type
+      for (const crypto of SUPPORTED_CRYPTOS) {
+        try {
+          logger.info(`--- Scanning ${CRYPTO_DISPLAY_NAMES[crypto]} (${crypto}) ---`);
           
-          try {
-            const trades = await this.executor.executeSingleLegTrades(opportunities);
-            tradesExecuted = trades.length;
-            logger.info(`Successfully executed ${tradesExecuted} trades`);
+          // Fetch markets for this crypto
+          const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(crypto);
+          logger.info(`Found ${hourlyMarkets.length} hourly ${crypto} markets`);
+
+          // Store live market data for this crypto
+          const marketData: LiveMarketData[] = hourlyMarkets.map(market => {
+            const analysis = this.calculator.analyzeHourlyMarket(market);
+            return {
+              eventId: market.eventId,
+              title: market.title,
+              upPrice: analysis.upPrice,
+              downPrice: analysis.downPrice,
+              combinedCost: analysis.combinedCost,
+              hoursLeft: market.hoursUntilClose,
+              isViable: analysis.isViable,
+              viableSide: analysis.viableSide,
+              expectedValue: analysis.expectedValue,
+            };
+          });
+          this.marketDataByCrypto.set(crypto, marketData);
+          totalMarkets += hourlyMarkets.length;
+
+          // Find single-leg opportunities (≥70¢ on either side)
+          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
+          totalOpportunities += opportunities.length;
+
+          if (opportunities.length > 0) {
+            logger.info(`Found ${opportunities.length} ${crypto} opportunities with expensive side (≥70¢)`);
             
-            if (trades.length > 0) {
-              trades.forEach(trade => {
-                logger.info(`Trade ${trade.id}: ${trade.market_question} (${trade.side?.toUpperCase()}) - Status: ${trade.status}`);
-              });
+            if (inTradingWindow) {
+              logger.info(`✅ IN TRADING WINDOW - Executing ${crypto} trades...`);
+              
+              try {
+                const trades = await this.executor.executeSingleLegTrades(opportunities);
+                totalTradesExecuted += trades.length;
+                
+                if (trades.length > 0) {
+                  trades.forEach(trade => {
+                    logger.info(`Trade ${trade.id}: ${trade.market_question} (${trade.side?.toUpperCase()}) - Status: ${trade.status}`);
+                  });
+                }
+              } catch (execError) {
+                logger.error(`${crypto} trade execution failed:`, execError);
+              }
             }
-          } catch (execError) {
-            logger.error('Trade execution failed:', execError);
           }
+        } catch (cryptoError) {
+          logger.error(`Failed to scan ${crypto} markets:`, cryptoError);
+          // Continue with other cryptos even if one fails
         }
-      } else {
-        logger.info(`No markets with ≥70¢ side at this time (minute ${currentMinute}, ${inTradingWindow ? 'IN' : 'outside'} trading window)`);
+      }
+
+      // Log trading window status summary
+      if (totalOpportunities > 0 && !inTradingWindow) {
+        const minutesUntil = this.getMinutesUntilTradingWindow();
+        logger.info(`⏰ ${totalOpportunities} total opportunity(ies) found, but outside trading window (minute ${currentMinute})`);
+        logger.info(`   Trading window: minutes ${this.tradingWindowStart}-${this.tradingWindowEnd}. Opens in ${minutesUntil} minutes.`);
       }
 
       // Record scan in database
-      this.db.recordScan(hourlyMarkets.length, opportunities.length, tradesExecuted);
-      logger.info(`=== SCAN COMPLETE: ${hourlyMarkets.length} markets, ${opportunities.length} opportunities, ${tradesExecuted} trades ===`);
+      this.db.recordScan(totalMarkets, totalOpportunities, totalTradesExecuted);
+      logger.info(`=== MULTI-CRYPTO SCAN COMPLETE: ${totalMarkets} markets, ${totalOpportunities} opportunities, ${totalTradesExecuted} trades ===`);
 
     } catch (error) {
       logger.error('Scan failed with error:', error);
@@ -284,16 +300,18 @@ export class TradingScheduler {
   }
 
   /**
-   * Force a manual scan (bypasses disabled check)
+   * Force a manual scan for a specific crypto or all cryptos (bypasses disabled check)
    */
-  async forceScan(): Promise<{ markets: number; opportunities: number; trades: number }> {
+  async forceScan(crypto?: CryptoType): Promise<{ markets: number; opportunities: number; trades: number }> {
     if (this.isRunning) {
       throw new Error('Scan already in progress');
     }
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('Starting forced hourly BTC market scan (Single-Leg Strategy)...');
+    
+    const cryptosToScan = crypto ? [crypto] : SUPPORTED_CRYPTOS;
+    logger.info(`Starting forced scan for: ${cryptosToScan.join(', ')}...`);
 
     try {
       this.calculator.updateConfig({
@@ -301,40 +319,52 @@ export class TradingScheduler {
         maxCombinedCost: this.runtimeConfig.maxCombinedCost,
       });
 
-      // Scan hourly BTC markets
-      const hourlyMarkets = await this.scanner.scanHourlyBTCMarkets();
-      
-      // Store live market data for dashboard
-      this.lastScannedMarkets = hourlyMarkets.map(market => {
-        const analysis = this.calculator.analyzeHourlyMarket(market);
-        return {
-          eventId: market.eventId,
-          title: market.title,
-          upPrice: analysis.upPrice,
-          downPrice: analysis.downPrice,
-          combinedCost: analysis.combinedCost,
-          hoursLeft: market.hoursUntilClose,
-          isViable: analysis.isViable,
-          viableSide: analysis.viableSide,
-          expectedValue: analysis.expectedValue,
-        };
-      });
+      let totalMarkets = 0;
+      let totalOpportunities = 0;
+      let totalTradesExecuted = 0;
 
-      // Find single-leg opportunities (≥70¢)
-      const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
-      
-      let tradesExecuted = 0;
-      if (opportunities.length > 0 && this.runtimeConfig.botEnabled) {
-        const trades = await this.executor.executeSingleLegTrades(opportunities);
-        tradesExecuted = trades.length;
+      for (const c of cryptosToScan) {
+        try {
+          // Scan hourly markets for this crypto
+          const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(c);
+          
+          // Store live market data for dashboard
+          const marketData: LiveMarketData[] = hourlyMarkets.map(market => {
+            const analysis = this.calculator.analyzeHourlyMarket(market);
+            return {
+              eventId: market.eventId,
+              title: market.title,
+              upPrice: analysis.upPrice,
+              downPrice: analysis.downPrice,
+              combinedCost: analysis.combinedCost,
+              hoursLeft: market.hoursUntilClose,
+              isViable: analysis.isViable,
+              viableSide: analysis.viableSide,
+              expectedValue: analysis.expectedValue,
+            };
+          });
+          this.marketDataByCrypto.set(c, marketData);
+          totalMarkets += hourlyMarkets.length;
+
+          // Find single-leg opportunities (≥70¢)
+          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
+          totalOpportunities += opportunities.length;
+          
+          if (opportunities.length > 0 && this.runtimeConfig.botEnabled) {
+            const trades = await this.executor.executeSingleLegTrades(opportunities);
+            totalTradesExecuted += trades.length;
+          }
+        } catch (err) {
+          logger.error(`Force scan failed for ${c}:`, err);
+        }
       }
 
-      this.db.recordScan(hourlyMarkets.length, opportunities.length, tradesExecuted);
+      this.db.recordScan(totalMarkets, totalOpportunities, totalTradesExecuted);
 
       return {
-        markets: hourlyMarkets.length,
-        opportunities: opportunities.length,
-        trades: tradesExecuted,
+        markets: totalMarkets,
+        opportunities: totalOpportunities,
+        trades: totalTradesExecuted,
       };
     } finally {
       this.isRunning = false;
@@ -371,10 +401,29 @@ export class TradingScheduler {
   }
 
   /**
-   * Get the last scanned live markets
+   * Get the last scanned live markets for a specific crypto
    */
-  getLiveMarkets(): LiveMarketData[] {
-    return this.lastScannedMarkets;
+  getLiveMarkets(crypto?: CryptoType): LiveMarketData[] {
+    if (crypto) {
+      return this.marketDataByCrypto.get(crypto) || [];
+    }
+    // Return all markets if no crypto specified (backwards compatibility)
+    const allMarkets: LiveMarketData[] = [];
+    for (const markets of this.marketDataByCrypto.values()) {
+      allMarkets.push(...markets);
+    }
+    return allMarkets;
+  }
+
+  /**
+   * Get all live market data organized by crypto type
+   */
+  getAllLiveMarketsByCrypto(): Record<CryptoType, LiveMarketData[]> {
+    const result: Record<string, LiveMarketData[]> = {};
+    for (const crypto of SUPPORTED_CRYPTOS) {
+      result[crypto] = this.marketDataByCrypto.get(crypto) || [];
+    }
+    return result as Record<CryptoType, LiveMarketData[]>;
   }
 
   /**

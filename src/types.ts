@@ -198,5 +198,6 @@ export interface HourlyMarket {
     price: number;
   };
   hoursUntilClose: number;
+  crypto?: 'BTC' | 'ETH' | 'XRP' | 'SOL';  // Which crypto this market is for
 }
 

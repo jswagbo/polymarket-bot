@@ -46,12 +46,33 @@ const NEG_RISK_ABI = [
 // Series IDs for recurring markets
 export const SERIES_IDS = {
   BTC_HOURLY: '10114',      // BTC Up or Down Hourly
+  ETH_HOURLY: '10112',      // Ethereum Up or Down Hourly
   XRP_HOURLY: '10123',      // XRP Up or Down Hourly
+  SOL_HOURLY: '10113',      // Solana Up or Down Hourly
   TSLA_DAILY: '10375',      // TSLA Daily Up Down
   AMZN_DAILY: '10378',      // AMZN Daily Up Down
   RUSSELL_DAILY: '10388',   // Russell 2000 Daily Up or Down
   EUR_USD_DAILY: '10405',   // EUR/USD Daily Up or Down
   BRENT_DAILY: '10416',     // Brent Crude Oil Daily Up or Down
+};
+
+// Crypto types supported for hourly markets
+export type CryptoType = 'BTC' | 'ETH' | 'XRP' | 'SOL';
+
+// Map crypto types to series IDs
+export const CRYPTO_SERIES_MAP: Record<CryptoType, string> = {
+  BTC: SERIES_IDS.BTC_HOURLY,
+  ETH: SERIES_IDS.ETH_HOURLY,
+  XRP: SERIES_IDS.XRP_HOURLY,
+  SOL: SERIES_IDS.SOL_HOURLY,
+};
+
+// Display names for each crypto
+export const CRYPTO_DISPLAY_NAMES: Record<CryptoType, string> = {
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+  XRP: 'XRP',
+  SOL: 'Solana',
 };
 
 export interface PolymarketClientConfig {
@@ -214,11 +235,16 @@ export class PolymarketClient {
   }
 
   /**
-   * Get all active hourly BTC Up/Down events
+   * Get all active hourly events for a specific crypto
    */
-  async getHourlyBTCEvents(): Promise<any[]> {
+  async getHourlyCryptoEvents(crypto: CryptoType): Promise<any[]> {
     try {
-      const series = await this.getSeries(SERIES_IDS.BTC_HOURLY);
+      const seriesId = CRYPTO_SERIES_MAP[crypto];
+      if (!seriesId) {
+        throw new Error(`Unknown crypto type: ${crypto}`);
+      }
+      
+      const series = await this.getSeries(seriesId);
       const events = series.events || [];
       
       // Filter for non-closed events that end in the future
@@ -234,12 +260,19 @@ export class PolymarketClient {
         return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
       });
 
-      logger.info(`Found ${activeEvents.length} active hourly BTC events`);
+      logger.info(`Found ${activeEvents.length} active hourly ${crypto} events`);
       return activeEvents;
     } catch (error) {
-      logger.error('Failed to fetch hourly BTC events', error);
+      logger.error(`Failed to fetch hourly ${crypto} events`, error);
       throw error;
     }
+  }
+
+  /**
+   * Get all active hourly BTC Up/Down events (backwards compatibility)
+   */
+  async getHourlyBTCEvents(): Promise<any[]> {
+    return this.getHourlyCryptoEvents('BTC');
   }
 
   /**

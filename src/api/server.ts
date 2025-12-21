@@ -3,10 +3,11 @@ import cors from 'cors';
 import path from 'path';
 import { Database } from '../db/database';
 import { RuntimeConfig, Config } from '../config';
-import { TradingScheduler } from '../scheduler';
+import { TradingScheduler, SUPPORTED_CRYPTOS } from '../scheduler';
 import { WeatherScheduler } from '../weather';
 import { createLogger } from '../utils/logger';
 import { ApiResponse, DashboardStats, BotStatus } from '../types';
+import { CryptoType, CRYPTO_DISPLAY_NAMES } from '../polymarket/client';
 
 const logger = createLogger('API');
 
@@ -153,11 +154,32 @@ export function createServer(
     res.json({ success: true, data: { enabled: runtimeConfig.botEnabled } });
   });
 
-  // Force a scan
+  // Force a scan (all cryptos)
   app.post('/api/bot/scan', async (req: Request, res: Response) => {
     try {
       const result = await scheduler.forceScan();
       res.json({ success: true, data: result });
+    } catch (error) {
+      logger.error('Failed to run scan', error);
+      res.status(500).json({ success: false, error: String(error) });
+    }
+  });
+
+  // Force a scan for a specific crypto
+  app.post('/api/bot/scan/:crypto', async (req: Request, res: Response) => {
+    try {
+      const crypto = req.params.crypto.toUpperCase() as CryptoType;
+      
+      if (!SUPPORTED_CRYPTOS.includes(crypto)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid crypto: ${crypto}. Supported: ${SUPPORTED_CRYPTOS.join(', ')}` 
+        });
+        return;
+      }
+      
+      const result = await scheduler.forceScan(crypto);
+      res.json({ success: true, data: result, crypto });
     } catch (error) {
       logger.error('Failed to run scan', error);
       res.status(500).json({ success: false, error: String(error) });
@@ -461,13 +483,52 @@ export function createServer(
     }
   });
 
-  // Get live markets (last scanned)
+  // Get live markets (last scanned) - all cryptos
   app.get('/api/markets/live', (req: Request, res: Response) => {
     try {
       const liveMarkets = scheduler.getLiveMarkets();
       res.json({ success: true, data: liveMarkets });
     } catch (error) {
       logger.error('Failed to get live markets', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Get live markets for a specific crypto
+  app.get('/api/markets/live/:crypto', (req: Request, res: Response) => {
+    try {
+      const crypto = req.params.crypto.toUpperCase() as CryptoType;
+      
+      if (!SUPPORTED_CRYPTOS.includes(crypto)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid crypto: ${crypto}. Supported: ${SUPPORTED_CRYPTOS.join(', ')}` 
+        });
+        return;
+      }
+      
+      const liveMarkets = scheduler.getLiveMarkets(crypto);
+      res.json({ success: true, data: liveMarkets, crypto });
+    } catch (error) {
+      logger.error('Failed to get live markets', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Get all live markets organized by crypto
+  app.get('/api/markets/live-all', (req: Request, res: Response) => {
+    try {
+      const allMarkets = scheduler.getAllLiveMarketsByCrypto();
+      res.json({ 
+        success: true, 
+        data: allMarkets,
+        supportedCryptos: SUPPORTED_CRYPTOS.map(c => ({
+          symbol: c,
+          name: CRYPTO_DISPLAY_NAMES[c],
+        }))
+      });
+    } catch (error) {
+      logger.error('Failed to get all live markets', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   });

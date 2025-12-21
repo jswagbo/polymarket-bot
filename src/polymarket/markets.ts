@@ -1,5 +1,5 @@
 import { Market, Token, BITCOIN_MARKET_FILTER, HourlyMarket } from '../types';
-import { PolymarketClient } from './client';
+import { PolymarketClient, CryptoType, CRYPTO_DISPLAY_NAMES } from './client';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('MarketScanner');
@@ -26,45 +26,61 @@ export class MarketScanner {
   constructor(private client: PolymarketClient) {}
 
   /**
-   * Fetch active hourly BTC Up/Down markets from Gamma API
-   * This is the main method for finding straddle opportunities
+   * Fetch active hourly markets for any crypto from Gamma API
+   * This is the main method for finding trading opportunities
    */
-  async scanHourlyBTCMarkets(): Promise<HourlyMarket[]> {
+  async scanHourlyCryptoMarkets(crypto: CryptoType): Promise<HourlyMarket[]> {
     try {
-      logger.info('Scanning for hourly BTC Up/Down markets...');
+      const displayName = CRYPTO_DISPLAY_NAMES[crypto];
+      logger.info(`Scanning for hourly ${displayName} Up/Down markets...`);
       
-      // Get upcoming events (within next 24 hours)
-      const events = await this.client.getUpcomingHourlyEvents(24);
-      logger.info(`Found ${events.length} upcoming hourly events`);
+      // Get upcoming events for this crypto (within next 24 hours)
+      const events = await this.client.getHourlyCryptoEvents(crypto);
+      // Filter for events within 24 hours
+      const now = new Date();
+      const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const upcomingEvents = events.filter((e: any) => {
+        const endDate = new Date(e.endDate);
+        return endDate <= cutoff;
+      });
+      
+      logger.info(`Found ${upcomingEvents.length} upcoming hourly ${crypto} events`);
 
       const hourlyMarkets: HourlyMarket[] = [];
 
-      for (const event of events) {
+      for (const event of upcomingEvents) {
         try {
           // Get full event details with market data
           const eventDetails = await this.client.getEvent(event.id);
-          const market = await this.parseHourlyEvent(eventDetails);
+          const market = await this.parseHourlyEvent(eventDetails, crypto);
           
           if (market) {
             hourlyMarkets.push(market);
           }
         } catch (err) {
-          logger.debug(`Failed to parse event ${event.id}: ${err}`);
+          logger.debug(`Failed to parse ${crypto} event ${event.id}: ${err}`);
         }
       }
 
-      logger.info(`Parsed ${hourlyMarkets.length} tradeable hourly markets`);
+      logger.info(`Parsed ${hourlyMarkets.length} tradeable hourly ${crypto} markets`);
       return hourlyMarkets;
     } catch (error) {
-      logger.error('Failed to scan hourly BTC markets', error);
+      logger.error(`Failed to scan hourly ${crypto} markets`, error);
       throw error;
     }
   }
 
   /**
+   * Fetch active hourly BTC Up/Down markets from Gamma API (backwards compatibility)
+   */
+  async scanHourlyBTCMarkets(): Promise<HourlyMarket[]> {
+    return this.scanHourlyCryptoMarkets('BTC');
+  }
+
+  /**
    * Parse a Gamma API event into our HourlyMarket format
    */
-  private async parseHourlyEvent(event: any): Promise<HourlyMarket | null> {
+  private async parseHourlyEvent(event: any, crypto: CryptoType = 'BTC'): Promise<HourlyMarket | null> {
     try {
       // Get the market from the event (usually just one market per event)
       const markets = event.markets || [];
@@ -124,6 +140,7 @@ export class MarketScanner {
           price: liveDownPrice || downPrice,
         },
         hoursUntilClose,
+        crypto,
       };
     } catch (error) {
       logger.debug(`Failed to parse hourly event: ${error}`);
