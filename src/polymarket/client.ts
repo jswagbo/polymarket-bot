@@ -32,7 +32,9 @@ const CTF_CONTRACT = '0x4D97DCd97eC945f40cF65F87097ACe5EA0476045'; // Polymarket
 const CTF_ABI = [
   'function balanceOf(address owner, uint256 id) external view returns (uint256)',
   'function balanceOfBatch(address[] owners, uint256[] ids) external view returns (uint256[])',
-  'function redeemPositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint256[] indexSets) external'
+  'function redeemPositions(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint256[] indexSets) external',
+  'function setApprovalForAll(address operator, bool approved) external',
+  'function isApprovedForAll(address owner, address operator) external view returns (bool)'
 ];
 
 // NegRisk Adapter for redemption
@@ -774,6 +776,94 @@ export class PolymarketClient {
       logger.error('=== USDC Approval Failed ===');
       logger.error(`Error: ${error.message || error}`);
       if (error.code) logger.error(`Error code: ${error.code}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve CTF (Conditional Tokens) for selling positions
+   * This is required to sell/cash out positions
+   */
+  async approveCTFForSelling(): Promise<void> {
+    if (!this.wallet) {
+      throw new Error('No wallet configured');
+    }
+
+    logger.info('=== Starting CTF Approval for Selling ===');
+    
+    try {
+      // Try multiple RPCs until one works
+      let provider: ethers.providers.JsonRpcProvider | null = null;
+      
+      for (const rpc of POLYGON_RPCS) {
+        try {
+          logger.info(`Trying RPC: ${rpc}...`);
+          const testProvider = new ethers.providers.JsonRpcProvider(rpc);
+          await testProvider.getNetwork();
+          provider = testProvider;
+          break;
+        } catch (rpcError: any) {
+          logger.warn(`❌ RPC ${rpc} failed: ${rpcError.message}`);
+        }
+      }
+      
+      if (!provider) {
+        throw new Error('All RPC endpoints failed. Please try again later.');
+      }
+
+      const connectedWallet = this.wallet.connect(provider);
+      const address = await connectedWallet.getAddress();
+      logger.info(`Wallet address: ${address}`);
+      
+      // Get current gas price and boost it
+      const gasPrice = await provider.getGasPrice();
+      const boostedGasPrice = gasPrice.mul(150).div(100); // 50% boost
+      const minGasPrice = ethers.utils.parseUnits('50', 'gwei');
+      const finalGasPrice = boostedGasPrice.gt(minGasPrice) ? boostedGasPrice : minGasPrice;
+      
+      // Create CTF contract instance
+      const ctf = new ethers.Contract(CTF_CONTRACT, CTF_ABI, connectedWallet);
+      
+      // Check if already approved for CTF Exchange
+      const isApprovedCTF = await ctf.isApprovedForAll(address, CTF_EXCHANGE);
+      logger.info(`CTF Exchange approval status: ${isApprovedCTF}`);
+      
+      if (!isApprovedCTF) {
+        logger.info('Approving CTF for CTF Exchange...');
+        const tx1 = await ctf.setApprovalForAll(CTF_EXCHANGE, true, {
+          gasLimit: 100000,
+          gasPrice: finalGasPrice
+        });
+        logger.info(`✅ CTF Exchange approval tx sent: ${tx1.hash}`);
+        logger.info(`   View: https://polygonscan.com/tx/${tx1.hash}`);
+        await tx1.wait();
+        logger.info('✅ CTF Exchange approval confirmed!');
+      } else {
+        logger.info('✅ CTF Exchange already approved for selling');
+      }
+      
+      // Check if already approved for Neg Risk Exchange
+      const isApprovedNegRisk = await ctf.isApprovedForAll(address, NEG_RISK_CTF_EXCHANGE);
+      logger.info(`Neg Risk Exchange approval status: ${isApprovedNegRisk}`);
+      
+      if (!isApprovedNegRisk) {
+        logger.info('Approving CTF for Neg Risk Exchange...');
+        const tx2 = await ctf.setApprovalForAll(NEG_RISK_CTF_EXCHANGE, true, {
+          gasLimit: 100000,
+          gasPrice: finalGasPrice
+        });
+        logger.info(`✅ Neg Risk approval tx sent: ${tx2.hash}`);
+        logger.info(`   View: https://polygonscan.com/tx/${tx2.hash}`);
+        await tx2.wait();
+        logger.info('✅ Neg Risk Exchange approval confirmed!');
+      } else {
+        logger.info('✅ Neg Risk Exchange already approved for selling');
+      }
+      
+      logger.info('=== CTF Approval Complete! Ready to sell positions. ===');
+    } catch (error: any) {
+      logger.error('=== CTF Approval Failed ===');
+      logger.error(`Error: ${error.message || error}`);
       throw error;
     }
   }

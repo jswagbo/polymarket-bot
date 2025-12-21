@@ -213,6 +213,33 @@ export function createServer(
     }
   });
 
+  // Approve CTF for selling positions
+  app.post('/api/bot/approve-sell', async (req: Request, res: Response) => {
+    try {
+      const client = (scheduler as any).client as import('../polymarket/client').PolymarketClient;
+      
+      if (client.isReadOnly()) {
+        res.status(400).json({ success: false, error: 'Cannot approve in read-only mode' });
+        return;
+      }
+
+      logger.info('Starting CTF approval for selling (runs in background)...');
+      
+      // Start approval in background
+      client.approveCTFForSelling()
+        .then(() => logger.info('✅ CTF approval completed! You can now sell positions.'))
+        .catch((err: any) => logger.error('❌ CTF approval failed:', err.message || err));
+      
+      res.json({ 
+        success: true, 
+        message: 'CTF approval started! Check Railway logs for progress. This allows selling positions.' 
+      });
+    } catch (error: any) {
+      logger.error('Failed to start CTF approval', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to start approval' });
+    }
+  });
+
   // Check USDC status (balance and allowances for both USDC types)
   app.get('/api/bot/usdc-status', async (req: Request, res: Response) => {
     try {

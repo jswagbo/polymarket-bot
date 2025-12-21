@@ -1304,9 +1304,10 @@
     <div class="card" style="margin-bottom: 24px;">
       <div class="card-header">
         <h2 class="card-title">💰 Positions & Winnings</h2>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="btn btn-secondary" id="refreshPositionsBtn">🔄 Refresh</button>
           <button class="btn btn-primary" id="claimAllBtn">💵 Claim Winnings</button>
+          <button class="btn btn-secondary" id="approveSellBtn">🔓 Approve Selling</button>
           <button class="btn btn-danger" id="cashOutBtn">💸 Cash Out All</button>
         </div>
       </div>
@@ -1377,6 +1378,7 @@
     document.getElementById('refreshAnalyticsBtn').addEventListener('click', fetchAnalytics);
     document.getElementById('exportCsvBtn').addEventListener('click', exportTradesToCsv);
     document.getElementById('cashOutBtn').addEventListener('click', cashOutAll);
+    document.getElementById('approveSellBtn').addEventListener('click', approveSelling);
     
     // Update trading window status every second
     setInterval(updateTradingWindow, 1000);
@@ -1612,6 +1614,23 @@
         const btn = document.getElementById('cashOutBtn');
         btn.disabled = false;
         btn.innerHTML = '💸 Cash Out All';
+      }
+    }
+
+    async function approveSelling() {
+      try {
+        const btn = document.getElementById('approveSellBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Approving...';
+        
+        await apiCall('/bot/approve-sell', 'POST');
+        showToast('CTF approval started! This allows selling positions. Check logs for progress.', 'success');
+      } catch (error) {
+        showToast('Failed to approve: ' + error.message, 'error');
+      } finally {
+        const btn = document.getElementById('approveSellBtn');
+        btn.disabled = false;
+        btn.innerHTML = '🔓 Approve Selling';
       }
     }
 
