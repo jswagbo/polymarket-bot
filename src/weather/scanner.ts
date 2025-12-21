@@ -16,12 +16,24 @@ const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
 
 // Keywords to identify temperature markets
 const TEMP_KEYWORDS = [
+  'highest temperature',
   'temperature',
   'high temperature',
   'daily high',
   'degrees',
   '°F',
   '°f',
+];
+
+// Search queries to find temperature markets
+const SEARCH_QUERIES = [
+  'highest temperature',
+  'temperature NYC',
+  'temperature LA',
+  'temperature Chicago',
+  'temperature Miami',
+  'temperature Dallas',
+  'temperature Seattle',
 ];
 
 // City name variations in market titles
@@ -57,33 +69,113 @@ export class WeatherScanner {
     const markets: WeatherMarket[] = [];
 
     try {
-      // Search for temperature-related markets
-      const response = await fetch(
-        `${GAMMA_API_URL}/markets?closed=false&limit=100&tag=weather`,
+      // First try searching events
+      logger.info('Searching for temperature events...');
+      const eventsResponse = await fetch(
+        `${GAMMA_API_URL}/events?closed=false&limit=100&_q=${encodeURIComponent('highest temperature')}`,
         { headers: { 'Accept': 'application/json' } }
       );
 
-      if (!response.ok) {
-        // Try alternative search without tag filter
-        logger.warn('Tag search failed, trying broader search...');
-        return await this.searchBroadly();
-      }
-
-      const data = await response.json() as any[];
-      
-      for (const market of data) {
-        const weatherMarket = this.parseWeatherMarket(market);
-        if (weatherMarket) {
-          markets.push(weatherMarket);
+      if (eventsResponse.ok) {
+        const events = await eventsResponse.json() as any[];
+        logger.info(`Found ${events.length} events matching "highest temperature"`);
+        
+        for (const event of events) {
+          // Each event may have multiple markets (one per temperature bucket)
+          if (event.markets && event.markets.length > 0) {
+            const weatherMarket = this.parseEventAsMarket(event);
+            if (weatherMarket) {
+              markets.push(weatherMarket);
+            }
+          }
         }
       }
 
-      logger.info(`Found ${markets.length} temperature markets`);
+      // Also try market search
+      const marketsFound = await this.searchBroadly();
+      
+      // Merge, avoiding duplicates
+      for (const m of marketsFound) {
+        if (!markets.find(existing => existing.marketId === m.marketId)) {
+          markets.push(m);
+        }
+      }
+
+      logger.info(`Total temperature markets found: ${markets.length}`);
       return markets;
     } catch (error) {
       logger.error('Failed to fetch temperature markets:', error);
       return await this.searchBroadly();
     }
+  }
+
+  /**
+   * Parse a Polymarket event (with multiple markets) into our WeatherMarket format
+   */
+  private parseEventAsMarket(event: any): WeatherMarket | null {
+    const title = (event.title || event.question || '').toLowerCase();
+    const slug = (event.slug || '').toLowerCase();
+    const searchText = `${title} ${slug}`;
+    
+    // Check if it's a temperature event
+    const isTemp = TEMP_KEYWORDS.some(kw => searchText.includes(kw.toLowerCase()));
+    if (!isTemp) return null;
+
+    // Identify the city
+    let cityCode: string | null = null;
+    let cityName: string = '';
+    
+    for (const [code, variations] of Object.entries(CITY_VARIATIONS)) {
+      if (variations.some(v => searchText.includes(v))) {
+        cityCode = code;
+        cityName = CITIES[code].name;
+        break;
+      }
+    }
+    
+    if (!cityCode) return null;
+
+    // Parse target date
+    const targetDate = this.extractTargetDate(title, event);
+    if (!targetDate) return null;
+
+    // Parse outcomes from all markets in the event
+    const outcomes: MarketOutcome[] = [];
+    
+    for (const market of (event.markets || [])) {
+      const label = market.groupItemTitle || market.outcome || market.question || '';
+      const bucket = parseTempBucket(label);
+      
+      if (bucket) {
+        // Get best price from market
+        let price = 0.5;
+        if (market.outcomePrices && market.outcomePrices.length > 0) {
+          price = parseFloat(market.outcomePrices[0]);
+        } else if (market.bestAsk) {
+          price = parseFloat(market.bestAsk);
+        }
+        
+        outcomes.push({
+          tokenId: market.clobTokenIds?.[0] || market.conditionId || market.id,
+          bucket,
+          price,
+        });
+      }
+    }
+
+    if (outcomes.length === 0) return null;
+
+    logger.info(`✓ Parsed event: ${cityName} on ${targetDate} with ${outcomes.length} temperature buckets`);
+
+    return {
+      marketId: event.id || event.conditionId,
+      conditionId: event.conditionId || event.id,
+      city: cityName,
+      cityCode,
+      targetDate,
+      outcomes,
+      question: event.title || event.question,
+    };
   }
 
   /**
@@ -94,7 +186,8 @@ export class WeatherScanner {
 
     try {
       // Search for markets with temperature-related keywords
-      for (const keyword of ['temperature', 'high', 'weather']) {
+      for (const keyword of SEARCH_QUERIES) {
+        logger.info(`Searching for: "${keyword}"...`);
         const response = await fetch(
           `${GAMMA_API_URL}/markets?closed=false&limit=50&_q=${encodeURIComponent(keyword)}`,
           { headers: { 'Accept': 'application/json' } }
@@ -102,15 +195,18 @@ export class WeatherScanner {
 
         if (response.ok) {
           const data = await response.json() as any[];
+          logger.info(`  Found ${data.length} results for "${keyword}"`);
+          
           for (const market of data) {
             const weatherMarket = this.parseWeatherMarket(market);
             if (weatherMarket && !markets.find(m => m.marketId === weatherMarket.marketId)) {
               markets.push(weatherMarket);
+              logger.info(`  ✓ Added market: ${weatherMarket.question}`);
             }
           }
         }
         
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       return markets;
@@ -125,32 +221,47 @@ export class WeatherScanner {
    */
   private parseWeatherMarket(market: any): WeatherMarket | null {
     const question = (market.question || market.title || '').toLowerCase();
+    const slug = (market.slug || market.groupItemTitle || '').toLowerCase();
+    const searchText = `${question} ${slug}`;
     
     // Check if it's a temperature market
-    const isTemp = TEMP_KEYWORDS.some(kw => question.includes(kw.toLowerCase()));
-    if (!isTemp) return null;
+    const isTemp = TEMP_KEYWORDS.some(kw => searchText.includes(kw.toLowerCase()));
+    if (!isTemp) {
+      return null;
+    }
 
     // Identify the city
     let cityCode: string | null = null;
     let cityName: string = '';
     
     for (const [code, variations] of Object.entries(CITY_VARIATIONS)) {
-      if (variations.some(v => question.includes(v))) {
+      if (variations.some(v => searchText.includes(v))) {
         cityCode = code;
         cityName = CITIES[code].name;
         break;
       }
     }
     
-    if (!cityCode) return null;
+    if (!cityCode) {
+      logger.debug(`No city match found in: ${question}`);
+      return null;
+    }
 
     // Parse target date from market
     const targetDate = this.extractTargetDate(question, market);
-    if (!targetDate) return null;
+    if (!targetDate) {
+      logger.debug(`No target date found in: ${question}`);
+      return null;
+    }
 
     // Parse outcomes/buckets
     const outcomes = this.parseOutcomes(market);
-    if (outcomes.length === 0) return null;
+    if (outcomes.length === 0) {
+      logger.debug(`No temperature buckets found in: ${question}`);
+      return null;
+    }
+
+    logger.info(`✓ Parsed market: ${cityName} on ${targetDate} with ${outcomes.length} buckets`);
 
     return {
       marketId: market.id || market.conditionId,
@@ -205,18 +316,47 @@ export class WeatherScanner {
   private parseOutcomes(market: any): MarketOutcome[] {
     const outcomes: MarketOutcome[] = [];
     
-    // Handle different market structures
-    const outcomesList = market.outcomes || market.tokens || [];
+    // Handle different market structures - Polymarket can have nested outcomes
+    let outcomesList = market.outcomes || market.tokens || [];
+    
+    // If this is an event with multiple markets, try to get outcomes from markets
+    if (outcomesList.length === 0 && market.markets) {
+      for (const subMarket of market.markets) {
+        if (subMarket.outcomes) {
+          outcomesList = outcomesList.concat(subMarket.outcomes);
+        }
+      }
+    }
+    
+    // Also check for groupItemTitle pattern (temperature ranges)
+    if (market.groupItemTitle) {
+      const bucket = parseTempBucket(market.groupItemTitle);
+      if (bucket) {
+        outcomes.push({
+          tokenId: market.clobTokenIds?.[0] || market.conditionId || market.id,
+          bucket,
+          price: parseFloat(market.outcomePrices?.[0] || market.bestAsk || '0.5'),
+        });
+      }
+    }
     
     for (const outcome of outcomesList) {
-      const label = outcome.outcome || outcome.name || outcome.title || '';
+      const label = outcome.outcome || outcome.name || outcome.title || outcome.groupItemTitle || '';
       const bucket = parseTempBucket(label);
       
       if (bucket) {
+        const price = parseFloat(
+          outcome.price || 
+          outcome.lastTradePrice || 
+          outcome.outcomePrices?.[0] ||
+          outcome.bestAsk ||
+          '0.5'
+        );
+        
         outcomes.push({
-          tokenId: outcome.tokenId || outcome.token_id || outcome.id,
+          tokenId: outcome.tokenId || outcome.token_id || outcome.clobTokenIds?.[0] || outcome.id,
           bucket,
-          price: parseFloat(outcome.price || outcome.lastTradePrice || '0.5'),
+          price,
         });
       }
     }
