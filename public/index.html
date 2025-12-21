@@ -2345,58 +2345,38 @@
     }
     
     function renderTradesForCrypto(trades, prefix) {
-      const containerId = `${prefix}TradesContainer`;
+      const containerId = prefix + 'TradesContainer';
       const container = document.getElementById(containerId);
       if (!container) return;
       
       if (!trades || trades.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
-            <p>No trades yet. The bot buys when any side hits ≥70¢ (expected 98% win rate).</p>
-          </div>
-        `;
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No trades yet. The bot buys when any side hits ≥70¢ (expected 98% win rate).</p></div>';
         return;
       }
       
-      // Reuse the same trade rendering logic
-      container.innerHTML = `
-        <table class="trades-table">
-          <thead>
-            <tr>
-              <th>Market</th>
-              <th>Side</th>
-              <th>Price</th>
-              <th>Cost</th>
-              <th>Status</th>
-              <th>P&L</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${trades.map(t => {
-              const side = t.side || (t.up_price > t.down_price ? 'up' : 'down');
-              const price = t.side === 'up' ? t.up_price 
-                : t.side === 'down' ? t.down_price 
-                : (t.up_price + t.down_price) / 2;
-              return \`
-              <tr>
-                <td class="trade-market" title="\${t.market_question}">\${t.market_question}</td>
-                <td>
-                  <span style="color: \${side === 'up' ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
-                    \${side === 'up' ? '📈 UP' : '📉 DOWN'}
-                  </span>
-                </td>
-                <td>\${(price * 100).toFixed(1)}¢</td>
-                <td>$\${t.combined_cost.toFixed(2)}</td>
-                <td><span class="trade-status \${t.status}">\${t.status}</span></td>
-                <td>\${t.pnl !== null ? \`$\${t.pnl.toFixed(2)}\` : '--'}</td>
-                <td>\${formatTime(t.created_at)}</td>
-              </tr>
-            \`}).join('')}
-          </tbody>
-        </table>
-      `;
+      // Build HTML using string concatenation to avoid template literal issues
+      let html = '<table class="trades-table"><thead><tr><th>Market</th><th>Side</th><th>Price</th><th>Cost</th><th>Status</th><th>P&L</th><th>Time</th></tr></thead><tbody>';
+      
+      trades.forEach(function(t) {
+        const side = t.side || (t.up_price > t.down_price ? 'up' : 'down');
+        const price = t.side === 'up' ? t.up_price : t.side === 'down' ? t.down_price : (t.up_price + t.down_price) / 2;
+        const sideColor = side === 'up' ? 'var(--success)' : 'var(--danger)';
+        const sideIcon = side === 'up' ? '📈 UP' : '📉 DOWN';
+        const pnlDisplay = t.pnl !== null ? '$' + t.pnl.toFixed(2) : '--';
+        
+        html += '<tr>';
+        html += '<td class="trade-market" title="' + t.market_question + '">' + t.market_question + '</td>';
+        html += '<td><span style="color: ' + sideColor + '; font-weight: 600;">' + sideIcon + '</span></td>';
+        html += '<td>' + (price * 100).toFixed(1) + '¢</td>';
+        html += '<td>$' + t.combined_cost.toFixed(2) + '</td>';
+        html += '<td><span class="trade-status ' + t.status + '">' + t.status + '</span></td>';
+        html += '<td>' + pnlDisplay + '</td>';
+        html += '<td>' + formatTime(t.created_at) + '</td>';
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
     }
 
     function updateTradingMode(isReadOnly, walletAddress, initError) {
