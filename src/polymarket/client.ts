@@ -43,12 +43,12 @@ const NEG_RISK_ABI = [
   'function redeemPositions(bytes32 conditionId, uint256[] amounts) external'
 ];
 
-// Series IDs for recurring markets
+// Series IDs for recurring markets (verified via Gamma API)
 export const SERIES_IDS = {
   BTC_HOURLY: '10114',      // BTC Up or Down Hourly
-  ETH_HOURLY: '10112',      // Ethereum Up or Down Hourly
+  ETH_HOURLY: '10117',      // ETH Up or Down Hourly (slug: eth-up-or-down-hourly)
   XRP_HOURLY: '10123',      // XRP Up or Down Hourly
-  SOL_HOURLY: '10113',      // Solana Up or Down Hourly
+  SOL_HOURLY: '10122',      // Solana Up or Down Hourly (slug: solana-up-or-down-hourly)
   TSLA_DAILY: '10375',      // TSLA Daily Up Down
   AMZN_DAILY: '10378',      // AMZN Daily Up Down
   RUSSELL_DAILY: '10388',   // Russell 2000 Daily Up or Down
