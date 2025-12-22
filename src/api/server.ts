@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { Database } from '../db/database';
-import { RuntimeConfig, Config } from '../config';
+import { RuntimeConfig, Config, CryptoType as ConfigCryptoType, ALL_CRYPTOS } from '../config';
 import { TradingScheduler, SUPPORTED_CRYPTOS } from '../scheduler';
 import { WeatherScheduler } from '../weather';
 import { createLogger } from '../utils/logger';
@@ -145,13 +145,134 @@ export function createServer(
     }
   });
 
-  // Enable/disable bot
+  // Enable/disable bot (global toggle)
   app.post('/api/bot/toggle', (req: Request, res: Response) => {
     runtimeConfig.update({ botEnabled: !runtimeConfig.botEnabled });
     db.setState('botEnabled', String(runtimeConfig.botEnabled));
     
     logger.info(`Bot ${runtimeConfig.botEnabled ? 'enabled' : 'disabled'}`);
     res.json({ success: true, data: { enabled: runtimeConfig.botEnabled } });
+  });
+
+  // ============================================
+  // PER-CRYPTO SETTINGS ENDPOINTS
+  // ============================================
+
+  // Get settings for a specific crypto
+  app.get('/api/crypto/:crypto/settings', (req: Request, res: Response) => {
+    try {
+      const crypto = req.params.crypto.toUpperCase() as ConfigCryptoType;
+      
+      if (!ALL_CRYPTOS.includes(crypto)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid crypto: ${crypto}. Supported: ${ALL_CRYPTOS.join(', ')}` 
+        });
+        return;
+      }
+      
+      const settings = runtimeConfig.getCryptoSettings(crypto);
+      res.json({ success: true, data: { crypto, ...settings } });
+    } catch (error) {
+      logger.error('Failed to get crypto settings', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Update settings for a specific crypto
+  app.post('/api/crypto/:crypto/settings', (req: Request, res: Response) => {
+    try {
+      const crypto = req.params.crypto.toUpperCase() as ConfigCryptoType;
+      
+      if (!ALL_CRYPTOS.includes(crypto)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid crypto: ${crypto}. Supported: ${ALL_CRYPTOS.join(', ')}` 
+        });
+        return;
+      }
+      
+      const { enabled, betSize, minPrice } = req.body;
+      
+      // Validate inputs
+      if (betSize !== undefined && (typeof betSize !== 'number' || betSize < 1)) {
+        res.status(400).json({ success: false, error: 'betSize must be a number >= 1' });
+        return;
+      }
+      
+      if (minPrice !== undefined && (typeof minPrice !== 'number' || minPrice < 0.5 || minPrice > 0.99)) {
+        res.status(400).json({ success: false, error: 'minPrice must be between 0.50 and 0.99' });
+        return;
+      }
+      
+      // Update settings
+      runtimeConfig.updateCryptoSettings(crypto, { enabled, betSize, minPrice });
+      
+      // Persist to database
+      const newSettings = runtimeConfig.getCryptoSettings(crypto);
+      db.setState(`crypto_${crypto}_enabled`, String(newSettings.enabled));
+      db.setState(`crypto_${crypto}_betSize`, String(newSettings.betSize));
+      db.setState(`crypto_${crypto}_minPrice`, String(newSettings.minPrice));
+      
+      logger.info(`${crypto} settings updated:`, newSettings);
+      res.json({ success: true, data: { crypto, ...newSettings } });
+    } catch (error) {
+      logger.error('Failed to update crypto settings', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Toggle a specific crypto on/off
+  app.post('/api/crypto/:crypto/toggle', (req: Request, res: Response) => {
+    try {
+      const crypto = req.params.crypto.toUpperCase() as ConfigCryptoType;
+      
+      if (!ALL_CRYPTOS.includes(crypto)) {
+        res.status(400).json({ 
+          success: false, 
+          error: `Invalid crypto: ${crypto}. Supported: ${ALL_CRYPTOS.join(', ')}` 
+        });
+        return;
+      }
+      
+      const currentSettings = runtimeConfig.getCryptoSettings(crypto);
+      const newEnabled = !currentSettings.enabled;
+      
+      runtimeConfig.updateCryptoSettings(crypto, { enabled: newEnabled });
+      db.setState(`crypto_${crypto}_enabled`, String(newEnabled));
+      
+      logger.info(`${crypto} ${newEnabled ? 'enabled' : 'disabled'}`);
+      res.json({ success: true, data: { crypto, enabled: newEnabled } });
+    } catch (error) {
+      logger.error('Failed to toggle crypto', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  });
+
+  // Get all crypto settings at once
+  app.get('/api/crypto/all-settings', (req: Request, res: Response) => {
+    try {
+      const allSettings: Record<string, any> = {};
+      
+      for (const crypto of ALL_CRYPTOS) {
+        const settings = runtimeConfig.getCryptoSettings(crypto);
+        allSettings[crypto] = {
+          ...settings,
+          displayName: CRYPTO_DISPLAY_NAMES[crypto as CryptoType],
+        };
+      }
+      
+      res.json({ 
+        success: true, 
+        data: {
+          globalEnabled: runtimeConfig.botEnabled,
+          cryptos: allSettings,
+        }
+      });
+    } catch (error) {
+      logger.error('Failed to get all crypto settings', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
   });
 
   // Force a scan (all cryptos)

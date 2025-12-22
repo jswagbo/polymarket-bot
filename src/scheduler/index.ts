@@ -4,12 +4,12 @@ import { MarketScanner } from '../polymarket/markets';
 import { StraddleCalculator } from '../trading/straddle';
 import { TradeExecutor } from '../trading/executor';
 import { Database } from '../db/database';
-import { RuntimeConfig } from '../config';
+import { RuntimeConfig, CryptoType as ConfigCryptoType } from '../config';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Scheduler');
 
-// Supported crypto types for the 80¢ strategy
+// Supported crypto types for the configurable strategy
 export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH', 'XRP', 'SOL'];
 
 export interface LiveMarketData {
@@ -22,6 +22,7 @@ export interface LiveMarketData {
   isViable: boolean;
   viableSide: 'up' | 'down' | null;
   expectedValue: number;
+  threshold: number;  // The price threshold for this crypto
 }
 
 export class TradingScheduler {
@@ -190,7 +191,7 @@ export class TradingScheduler {
 
   /**
    * Run a single market scan and execute trades for ALL crypto types
-   * NEW STRATEGY: Buy expensive side (≥80¢) only
+   * NEW STRATEGY: Buy expensive side (≥ per-crypto threshold) only
    */
   async runScan(): Promise<void> {
     if (this.isRunning) {
@@ -198,6 +199,7 @@ export class TradingScheduler {
       return;
     }
 
+    // Check if global bot is enabled
     if (!this.runtimeConfig.botEnabled) {
       logger.debug('Bot is disabled, skipping scan');
       return;
@@ -205,15 +207,9 @@ export class TradingScheduler {
 
     this.isRunning = true;
     this.lastScanTime = new Date();
-    logger.info('=== STARTING MULTI-CRYPTO MARKET SCAN (Single-Leg Strategy: Buy ≥80¢) ===');
+    logger.info('=== STARTING MULTI-CRYPTO MARKET SCAN (Per-Crypto Configurable Strategy) ===');
 
     try {
-      // Update calculator config in case it changed
-      this.calculator.updateConfig({
-        betSize: this.runtimeConfig.betSize,
-        maxCombinedCost: this.runtimeConfig.maxCombinedCost,
-      });
-
       let totalMarkets = 0;
       let totalOpportunities = 0;
       let totalTradesExecuted = 0;
@@ -223,15 +219,22 @@ export class TradingScheduler {
       // Scan each crypto type
       for (const crypto of SUPPORTED_CRYPTOS) {
         try {
-          logger.info(`--- Scanning ${CRYPTO_DISPLAY_NAMES[crypto]} (${crypto}) ---`);
+          // Get per-crypto settings
+          const cryptoSettings = this.runtimeConfig.getCryptoSettings(crypto as ConfigCryptoType);
+          const isEnabled = this.runtimeConfig.isCryptoEnabled(crypto as ConfigCryptoType);
+          const minPrice = cryptoSettings.minPrice;
+          const betSize = cryptoSettings.betSize;
+          const thresholdPct = (minPrice * 100).toFixed(0);
           
-          // Fetch markets for this crypto
+          logger.info(`--- Scanning ${CRYPTO_DISPLAY_NAMES[crypto]} (${crypto}) | Enabled: ${isEnabled} | Threshold: ${thresholdPct}¢ | Bet: $${betSize} ---`);
+          
+          // Fetch markets for this crypto (always fetch for dashboard display)
           const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(crypto);
           logger.info(`Found ${hourlyMarkets.length} hourly ${crypto} markets`);
 
-          // Store live market data for this crypto
+          // Store live market data for this crypto (use per-crypto threshold)
           const marketData: LiveMarketData[] = hourlyMarkets.map(market => {
-            const analysis = this.calculator.analyzeHourlyMarket(market);
+            const analysis = this.calculator.analyzeHourlyMarket(market, minPrice, betSize);
             return {
               eventId: market.eventId,
               title: market.title,
@@ -242,17 +245,24 @@ export class TradingScheduler {
               isViable: analysis.isViable,
               viableSide: analysis.viableSide,
               expectedValue: analysis.expectedValue,
+              threshold: minPrice,
             };
           });
           this.marketDataByCrypto.set(crypto, marketData);
           totalMarkets += hourlyMarkets.length;
 
-          // Find single-leg opportunities (≥80¢ on either side)
-          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
+          // Only look for opportunities if this crypto is enabled
+          if (!isEnabled) {
+            logger.info(`${crypto} is disabled, skipping trade execution`);
+            continue;
+          }
+
+          // Find single-leg opportunities (≥ per-crypto threshold on either side)
+          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets, minPrice, betSize);
           totalOpportunities += opportunities.length;
 
           if (opportunities.length > 0) {
-            logger.info(`Found ${opportunities.length} ${crypto} opportunities with expensive side (≥80¢)`);
+            logger.info(`Found ${opportunities.length} ${crypto} opportunities with expensive side (≥${thresholdPct}¢)`);
             
             if (inTradingWindow) {
               logger.info(`✅ IN TRADING WINDOW - Executing ${crypto} trades...`);
@@ -314,23 +324,24 @@ export class TradingScheduler {
     logger.info(`Starting forced scan for: ${cryptosToScan.join(', ')}...`);
 
     try {
-      this.calculator.updateConfig({
-        betSize: this.runtimeConfig.betSize,
-        maxCombinedCost: this.runtimeConfig.maxCombinedCost,
-      });
-
       let totalMarkets = 0;
       let totalOpportunities = 0;
       let totalTradesExecuted = 0;
 
       for (const c of cryptosToScan) {
         try {
+          // Get per-crypto settings
+          const cryptoSettings = this.runtimeConfig.getCryptoSettings(c as ConfigCryptoType);
+          const isEnabled = this.runtimeConfig.isCryptoEnabled(c as ConfigCryptoType);
+          const minPrice = cryptoSettings.minPrice;
+          const betSize = cryptoSettings.betSize;
+          
           // Scan hourly markets for this crypto
           const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(c);
           
-          // Store live market data for dashboard
+          // Store live market data for dashboard (use per-crypto threshold)
           const marketData: LiveMarketData[] = hourlyMarkets.map(market => {
-            const analysis = this.calculator.analyzeHourlyMarket(market);
+            const analysis = this.calculator.analyzeHourlyMarket(market, minPrice, betSize);
             return {
               eventId: market.eventId,
               title: market.title,
@@ -341,16 +352,18 @@ export class TradingScheduler {
               isViable: analysis.isViable,
               viableSide: analysis.viableSide,
               expectedValue: analysis.expectedValue,
+              threshold: minPrice,
             };
           });
           this.marketDataByCrypto.set(c, marketData);
           totalMarkets += hourlyMarkets.length;
 
-          // Find single-leg opportunities (≥80¢)
-          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets);
+          // Find single-leg opportunities (≥ per-crypto threshold)
+          const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets, minPrice, betSize);
           totalOpportunities += opportunities.length;
           
-          if (opportunities.length > 0 && this.runtimeConfig.botEnabled) {
+          // Only execute trades if this specific crypto is enabled
+          if (opportunities.length > 0 && isEnabled) {
             const trades = await this.executor.executeSingleLegTrades(opportunities);
             totalTradesExecuted += trades.length;
           }

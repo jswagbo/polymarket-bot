@@ -1363,24 +1363,38 @@
     <!-- Control Panel -->
     <div class="card" style="margin-bottom: 24px;">
       <div class="card-header">
-        <h2 class="card-title">Bot Controls</h2>
+        <h2 class="card-title">₿ BTC Bot Controls</h2>
       </div>
       <div class="control-panel">
         <div class="toggle-container">
-          <div id="botToggle" class="toggle"></div>
-          <span class="toggle-label" id="toggleLabel">Bot Disabled</span>
+          <div id="btcBotToggle" class="toggle" onclick="toggleCrypto('BTC')"></div>
+          <span class="toggle-label" id="btcToggleLabel">BTC Disabled</span>
         </div>
         <div class="control-group">
           <label class="control-label">Bet Size ($)</label>
-          <input type="number" id="betSizeInput" class="control-input" min="1" step="1" value="10">
+          <input type="number" id="btcBetSizeInput" class="control-input" min="1" step="1" value="10">
         </div>
         <div class="control-group">
-          <label class="control-label">Max Combined</label>
-          <input type="number" id="maxCostInput" class="control-input" min="0.9" max="1.2" step="0.01" value="1.05">
+          <label class="control-label">Min Price (¢)</label>
+          <input type="number" id="btcMinPriceInput" class="control-input" min="50" max="99" step="1" value="80">
         </div>
-        <button class="btn btn-secondary" id="saveConfigBtn">💾 Save Config</button>
-        <button class="btn btn-primary" id="forceScanBtn">🔍 Force Scan</button>
+        <button class="btn btn-secondary" onclick="saveCryptoConfig('BTC')">💾 Save BTC</button>
+        <button class="btn btn-primary" onclick="forceScanCrypto('BTC')">🔍 Scan BTC</button>
+      </div>
+    </div>
+    
+    <!-- Global Controls -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2 class="card-title">🌐 Global Controls</h2>
+      </div>
+      <div class="control-panel">
+        <div class="toggle-container">
+          <div id="botToggle" class="toggle" onclick="toggleBot()"></div>
+          <span class="toggle-label" id="toggleLabel">Global Bot Disabled</span>
+        </div>
         <button class="btn btn-secondary" id="approveBtn">✅ Approve USDC</button>
+        <button class="btn btn-secondary" id="approveSellBtn">🔓 Approve Selling</button>
         <button class="btn btn-secondary" id="resetBtn">🔄 Reset History</button>
         <button class="btn btn-danger" id="emergencyStopBtn">⛔ Emergency Stop</button>
       </div>
@@ -1494,22 +1508,19 @@
       </div>
       <div class="control-panel">
         <div class="toggle-container">
-          <div id="ethBotToggle" class="toggle" onclick="toggleBot()"></div>
-          <span class="toggle-label" id="ethToggleLabel">Bot Disabled</span>
+          <div id="ethBotToggle" class="toggle" onclick="toggleCrypto('ETH')"></div>
+          <span class="toggle-label" id="ethToggleLabel">ETH Disabled</span>
         </div>
         <div class="control-group">
           <label class="control-label">Bet Size ($)</label>
           <input type="number" id="ethBetSizeInput" class="control-input" min="1" step="1" value="10">
         </div>
         <div class="control-group">
-          <label class="control-label">Max Combined</label>
-          <input type="number" id="ethMaxCostInput" class="control-input" min="0.9" max="1.2" step="0.01" value="1.05">
+          <label class="control-label">Min Price (¢)</label>
+          <input type="number" id="ethMinPriceInput" class="control-input" min="50" max="99" step="1" value="80">
         </div>
-        <button class="btn btn-secondary" onclick="saveConfig()">💾 Save Config</button>
+        <button class="btn btn-secondary" onclick="saveCryptoConfig('ETH')">💾 Save ETH</button>
         <button class="btn btn-primary" onclick="forceScanCrypto('ETH')">🔍 Scan ETH</button>
-        <button class="btn btn-secondary" onclick="approveUsdc()">✅ Approve USDC</button>
-        <button class="btn btn-secondary" onclick="resetBot()">🔄 Reset History</button>
-        <button class="btn btn-danger" onclick="emergencyStop()">⛔ Emergency Stop</button>
       </div>
     </div>
 
@@ -1621,22 +1632,19 @@
       </div>
       <div class="control-panel">
         <div class="toggle-container">
-          <div id="xrpBotToggle" class="toggle" onclick="toggleBot()"></div>
-          <span class="toggle-label" id="xrpToggleLabel">Bot Disabled</span>
+          <div id="xrpBotToggle" class="toggle" onclick="toggleCrypto('XRP')"></div>
+          <span class="toggle-label" id="xrpToggleLabel">XRP Disabled</span>
         </div>
         <div class="control-group">
           <label class="control-label">Bet Size ($)</label>
           <input type="number" id="xrpBetSizeInput" class="control-input" min="1" step="1" value="10">
         </div>
         <div class="control-group">
-          <label class="control-label">Max Combined</label>
-          <input type="number" id="xrpMaxCostInput" class="control-input" min="0.9" max="1.2" step="0.01" value="1.05">
+          <label class="control-label">Min Price (¢)</label>
+          <input type="number" id="xrpMinPriceInput" class="control-input" min="50" max="99" step="1" value="80">
         </div>
-        <button class="btn btn-secondary" onclick="saveConfig()">💾 Save Config</button>
+        <button class="btn btn-secondary" onclick="saveCryptoConfig('XRP')">💾 Save XRP</button>
         <button class="btn btn-primary" onclick="forceScanCrypto('XRP')">🔍 Scan XRP</button>
-        <button class="btn btn-secondary" onclick="approveUsdc()">✅ Approve USDC</button>
-        <button class="btn btn-secondary" onclick="resetBot()">🔄 Reset History</button>
-        <button class="btn btn-danger" onclick="emergencyStop()">⛔ Emergency Stop</button>
       </div>
     </div>
 
@@ -1748,22 +1756,19 @@
       </div>
       <div class="control-panel">
         <div class="toggle-container">
-          <div id="solBotToggle" class="toggle" onclick="toggleBot()"></div>
-          <span class="toggle-label" id="solToggleLabel">Bot Disabled</span>
+          <div id="solBotToggle" class="toggle" onclick="toggleCrypto('SOL')"></div>
+          <span class="toggle-label" id="solToggleLabel">SOL Disabled</span>
         </div>
         <div class="control-group">
           <label class="control-label">Bet Size ($)</label>
           <input type="number" id="solBetSizeInput" class="control-input" min="1" step="1" value="10">
         </div>
         <div class="control-group">
-          <label class="control-label">Max Combined</label>
-          <input type="number" id="solMaxCostInput" class="control-input" min="0.9" max="1.2" step="0.01" value="1.05">
+          <label class="control-label">Min Price (¢)</label>
+          <input type="number" id="solMinPriceInput" class="control-input" min="50" max="99" step="1" value="80">
         </div>
-        <button class="btn btn-secondary" onclick="saveConfig()">💾 Save Config</button>
+        <button class="btn btn-secondary" onclick="saveCryptoConfig('SOL')">💾 Save SOL</button>
         <button class="btn btn-primary" onclick="forceScanCrypto('SOL')">🔍 Scan SOL</button>
-        <button class="btn btn-secondary" onclick="approveUsdc()">✅ Approve USDC</button>
-        <button class="btn btn-secondary" onclick="resetBot()">🔄 Reset History</button>
-        <button class="btn btn-danger" onclick="emergencyStop()">⛔ Emergency Stop</button>
       </div>
     </div>
 
@@ -2013,9 +2018,10 @@
       try {
         const { data } = await apiCall('/stats');
         updateDashboard(data);
-        // Also fetch live markets for all cryptos and positions
+        // Also fetch live markets for all cryptos, positions, and crypto settings
         fetchAllCryptoMarkets();
         fetchPositions();
+        fetchAllCryptoSettings();
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       }
@@ -2399,8 +2405,10 @@
       }
     }
 
-    function renderLiveMarkets(markets) {
-      const container = document.getElementById('liveMarketsContainer');
+    function renderLiveMarkets(markets, crypto = 'BTC') {
+      const containerId = crypto === 'BTC' ? 'liveMarketsContainer' : `${crypto.toLowerCase()}LiveMarketsContainer`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
       
       if (!markets || markets.length === 0) {
         container.innerHTML = `
@@ -2420,17 +2428,19 @@
 
       container.innerHTML = `
         <div class="markets-grid">
-          ${markets.map(m => `
+          ${markets.map(m => {
+            const threshold = m.threshold ? (m.threshold * 100).toFixed(0) : '80';
+            return `
             <div class="market-card ${m.isViable ? 'viable' : ''}">
               <div class="market-title" title="${m.title}">${m.title}</div>
               <div class="market-prices">
                 <div class="price-box" style="${m.viableSide === 'up' ? 'border: 2px solid var(--success); box-shadow: 0 0 10px rgba(0,221,136,0.3);' : ''}">
                   <div class="price-label">Up ${m.viableSide === 'up' ? '🎯' : ''}</div>
-                  <div class="price-value up" style="${m.upPrice >= 0.70 ? 'font-weight: 700;' : ''}">${(m.upPrice * 100).toFixed(1)}¢</div>
+                  <div class="price-value up" style="${m.upPrice >= (m.threshold || 0.80) ? 'font-weight: 700;' : ''}">${(m.upPrice * 100).toFixed(1)}¢</div>
                 </div>
                 <div class="price-box" style="${m.viableSide === 'down' ? 'border: 2px solid var(--success); box-shadow: 0 0 10px rgba(0,221,136,0.3);' : ''}">
                   <div class="price-label">Down ${m.viableSide === 'down' ? '🎯' : ''}</div>
-                  <div class="price-value down" style="${m.downPrice >= 0.70 ? 'font-weight: 700;' : ''}">${(m.downPrice * 100).toFixed(1)}¢</div>
+                  <div class="price-value down" style="${m.downPrice >= (m.threshold || 0.80) ? 'font-weight: 700;' : ''}">${(m.downPrice * 100).toFixed(1)}¢</div>
                 </div>
               </div>
               <div class="market-meta">
@@ -2444,14 +2454,14 @@
               <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
                 ${m.isViable 
                   ? `<span class="viable-badge">✓ Buy ${m.viableSide?.toUpperCase()} @ ${((m.viableSide === 'up' ? m.upPrice : m.downPrice) * 100).toFixed(0)}¢</span>` 
-                  : `<span class="not-viable-badge">— Waiting for ≥80¢</span>`
+                  : `<span class="not-viable-badge">— Waiting for ≥${threshold}¢</span>`
                 }
                 <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
                   EV: ${m.expectedValue >= 0 ? '+' : ''}$${m.expectedValue.toFixed(2)}
                 </span>
               </div>
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>
       `;
     }
@@ -2732,10 +2742,94 @@
         const { data } = await apiCall(`/bot/scan/${crypto}`, 'POST');
         showToast(`${crypto} scan complete! Found ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
         
-        // Refresh the markets display
-        await fetchCryptoMarkets(crypto);
+        // Refresh the markets display for this crypto
+        await fetchSingleCryptoMarkets(crypto);
       } catch (error) {
         showToast(`Failed to scan ${crypto}: ${error.message}`, 'error');
+      }
+    }
+    
+    // Fetch markets for a single crypto
+    async function fetchSingleCryptoMarkets(crypto) {
+      try {
+        const { data } = await apiCall(`/markets/live/${crypto}`);
+        renderLiveMarkets(data, crypto);
+      } catch (error) {
+        console.error(`Failed to fetch ${crypto} markets:`, error);
+      }
+    }
+    
+    // Toggle a specific crypto on/off
+    async function toggleCrypto(crypto) {
+      try {
+        const { data } = await apiCall(`/crypto/${crypto}/toggle`, 'POST');
+        updateCryptoToggle(crypto, data.enabled);
+        showToast(`${crypto} ${data.enabled ? 'enabled' : 'disabled'}`, 'success');
+      } catch (error) {
+        showToast(`Failed to toggle ${crypto}: ${error.message}`, 'error');
+      }
+    }
+    
+    // Save settings for a specific crypto
+    async function saveCryptoConfig(crypto) {
+      try {
+        const betSizeInput = document.getElementById(`${crypto.toLowerCase()}BetSizeInput`);
+        const minPriceInput = document.getElementById(`${crypto.toLowerCase()}MinPriceInput`);
+        
+        const betSize = parseFloat(betSizeInput.value);
+        const minPrice = parseFloat(minPriceInput.value) / 100; // Convert cents to decimal
+        
+        await apiCall(`/crypto/${crypto}/settings`, 'POST', { betSize, minPrice });
+        showToast(`${crypto} settings saved (Bet: $${betSize}, Min: ${(minPrice * 100).toFixed(0)}¢)`, 'success');
+      } catch (error) {
+        showToast(`Failed to save ${crypto} config: ${error.message}`, 'error');
+      }
+    }
+    
+    // Update the toggle UI for a specific crypto
+    function updateCryptoToggle(crypto, enabled) {
+      const toggleId = `${crypto.toLowerCase()}BotToggle`;
+      const labelId = `${crypto.toLowerCase()}ToggleLabel`;
+      const toggle = document.getElementById(toggleId);
+      const label = document.getElementById(labelId);
+      
+      if (toggle) {
+        toggle.classList.toggle('active', enabled);
+      }
+      if (label) {
+        label.textContent = enabled ? `${crypto} Enabled` : `${crypto} Disabled`;
+      }
+    }
+    
+    // Fetch and display all crypto settings
+    async function fetchAllCryptoSettings() {
+      try {
+        const { data } = await apiCall('/crypto/all-settings');
+        
+        // Update global toggle
+        updateBotState(data.globalEnabled);
+        
+        // Update each crypto's controls
+        for (const [crypto, settings] of Object.entries(data.cryptos)) {
+          const lowerCrypto = crypto.toLowerCase();
+          
+          // Update toggle
+          updateCryptoToggle(crypto, settings.enabled);
+          
+          // Update bet size input
+          const betSizeInput = document.getElementById(`${lowerCrypto}BetSizeInput`);
+          if (betSizeInput) {
+            betSizeInput.value = settings.betSize;
+          }
+          
+          // Update min price input (convert decimal to cents)
+          const minPriceInput = document.getElementById(`${lowerCrypto}MinPriceInput`);
+          if (minPriceInput) {
+            minPriceInput.value = Math.round(settings.minPrice * 100);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch crypto settings:', error);
       }
     }
     
@@ -2744,15 +2838,10 @@
       try {
         const { data, supportedCryptos } = await apiCall('/markets/live-all');
         
-        // Update BTC markets (main panel)
-        if (data.BTC) {
-          renderLiveMarkets(data.BTC);
-        }
-        
-        // Update other crypto markets
-        ['ETH', 'XRP', 'SOL'].forEach(crypto => {
+        // Update markets for each crypto
+        ['BTC', 'ETH', 'XRP', 'SOL'].forEach(crypto => {
           if (data[crypto]) {
-            renderCryptoMarkets(crypto, data[crypto]);
+            renderLiveMarkets(data[crypto], crypto);
           }
         });
       } catch (error) {

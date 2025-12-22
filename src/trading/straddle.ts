@@ -7,18 +7,16 @@ const logger = createLogger('StrategyCalculator');
 /**
  * UPDATED STRATEGY - Single Leg Expensive Options
  * 
- * Based on research showing expensive options (≥80¢) win ~99% of the time:
- * - Buy whichever side hits 80¢ first
- * - Expected value: 0.99 × $1 - $0.80 = +$0.19 per share (+24% ROI)
- * 
- * This is simpler and more profitable than balanced straddles.
+ * Buy when price hits the configured threshold (per-crypto configurable).
+ * Higher thresholds = higher win rates but fewer opportunities.
  */
 
-// Strategy threshold - buy when price hits this level
-const EXPENSIVE_THRESHOLD = 0.80; // 80¢ = trigger to buy
+// Default threshold if not specified
+const DEFAULT_THRESHOLD = 0.80; // 80¢ = trigger to buy
 
 // Expected win rate for options at different price points
 function getExpectedWinRate(price: number): number {
+  if (price >= 0.90) return 0.995;     // 90¢+ wins ~99.5%
   if (price >= 0.80) return 0.99;      // 80¢+ wins ~99%
   if (price >= 0.70) return 0.98;      // 70-80¢ wins ~98%
   if (price >= 0.60) return 0.93;      // 60-70¢ wins ~93%
@@ -29,33 +27,50 @@ function getExpectedWinRate(price: number): number {
 export interface StraddleConfig {
   betSize: number;           // Amount to bet on the expensive leg
   maxCombinedCost: number;   // Not used in new strategy, kept for compatibility
+  minPriceThreshold?: number; // Optional: per-crypto price threshold
 }
 
 export class StraddleCalculator {
   constructor(private config: StraddleConfig) {}
 
+  // Get the threshold to use (from config or default)
+  private getThreshold(): number {
+    return this.config.minPriceThreshold ?? DEFAULT_THRESHOLD;
+  }
+
   /**
-   * NEW STRATEGY: Find single-leg opportunities where one side is ≥80¢
+   * NEW STRATEGY: Find single-leg opportunities where one side is ≥ threshold
    * Buy the expensive side only
+   * @param market The hourly market to analyze
+   * @param customThreshold Optional override threshold (for per-crypto settings)
+   * @param customBetSize Optional override bet size (for per-crypto settings)
    */
-  findSingleLegOpportunity(market: HourlyMarket): SingleLegOpportunity | null {
+  findSingleLegOpportunity(
+    market: HourlyMarket, 
+    customThreshold?: number,
+    customBetSize?: number
+  ): SingleLegOpportunity | null {
     const upPrice = market.upToken.price;
     const downPrice = market.downToken.price;
+    const threshold = customThreshold ?? this.getThreshold();
+    const betSize = customBetSize ?? this.config.betSize;
+    const thresholdPct = (threshold * 100).toFixed(0);
 
     // Validate prices
     if (upPrice <= 0 || downPrice <= 0) {
       return null;
     }
 
-    // Check if UP side is expensive (≥80¢)
-    if (upPrice >= EXPENSIVE_THRESHOLD) {
-      const size = this.config.betSize / upPrice;
+    // Check if UP side is expensive (≥ threshold)
+    if (upPrice >= threshold) {
+      const size = betSize / upPrice;
       const expectedWinRate = getExpectedWinRate(upPrice);
       const expectedValue = (expectedWinRate * 1.0) - upPrice; // EV per share
 
       logger.info(`🎯 Found expensive UP option: ${market.title}`, {
         side: 'UP',
         price: `${(upPrice * 100).toFixed(1)}¢`,
+        threshold: `${thresholdPct}¢`,
         expectedWinRate: `${(expectedWinRate * 100).toFixed(0)}%`,
         expectedValue: `+$${(expectedValue * size).toFixed(2)}`,
       });
@@ -77,15 +92,16 @@ export class StraddleCalculator {
       };
     }
 
-    // Check if DOWN side is expensive (≥80¢)
-    if (downPrice >= EXPENSIVE_THRESHOLD) {
-      const size = this.config.betSize / downPrice;
+    // Check if DOWN side is expensive (≥ threshold)
+    if (downPrice >= threshold) {
+      const size = betSize / downPrice;
       const expectedWinRate = getExpectedWinRate(downPrice);
       const expectedValue = (expectedWinRate * 1.0) - downPrice; // EV per share
 
       logger.info(`🎯 Found expensive DOWN option: ${market.title}`, {
         side: 'DOWN',
         price: `${(downPrice * 100).toFixed(1)}¢`,
+        threshold: `${thresholdPct}¢`,
         expectedWinRate: `${(expectedWinRate * 100).toFixed(0)}%`,
         expectedValue: `+$${(expectedValue * size).toFixed(2)}`,
       });
@@ -108,18 +124,27 @@ export class StraddleCalculator {
     }
 
     // Neither side is expensive enough
-    logger.debug(`Market ${market.title}: No side at 80¢+ (Up=${(upPrice*100).toFixed(1)}¢, Down=${(downPrice*100).toFixed(1)}¢)`);
+    logger.debug(`Market ${market.title}: No side at ${thresholdPct}¢+ (Up=${(upPrice*100).toFixed(1)}¢, Down=${(downPrice*100).toFixed(1)}¢)`);
     return null;
   }
 
   /**
    * Find all single-leg opportunities from hourly markets
+   * @param markets The hourly markets to scan
+   * @param customThreshold Optional override threshold (for per-crypto settings)
+   * @param customBetSize Optional override bet size (for per-crypto settings)
    */
-  findSingleLegOpportunities(markets: HourlyMarket[]): SingleLegOpportunity[] {
+  findSingleLegOpportunities(
+    markets: HourlyMarket[],
+    customThreshold?: number,
+    customBetSize?: number
+  ): SingleLegOpportunity[] {
     const opportunities: SingleLegOpportunity[] = [];
+    const threshold = customThreshold ?? this.getThreshold();
+    const thresholdPct = (threshold * 100).toFixed(0);
 
     for (const market of markets) {
-      const opportunity = this.findSingleLegOpportunity(market);
+      const opportunity = this.findSingleLegOpportunity(market, customThreshold, customBetSize);
       if (opportunity) {
         opportunities.push(opportunity);
       }
@@ -128,40 +153,50 @@ export class StraddleCalculator {
     // Sort by expected value (highest first)
     opportunities.sort((a, b) => b.expectedValue - a.expectedValue);
 
-    logger.info(`Found ${opportunities.length} single-leg opportunities at ≥80¢`);
+    logger.info(`Found ${opportunities.length} single-leg opportunities at ≥${thresholdPct}¢`);
     return opportunities;
   }
 
   /**
    * Analyze hourly market for dashboard display
    * Returns info about both sides for UI
+   * @param market The hourly market to analyze
+   * @param customThreshold Optional override threshold (for per-crypto settings)
+   * @param customBetSize Optional override bet size (for per-crypto settings)
    */
-  analyzeHourlyMarket(market: HourlyMarket): {
+  analyzeHourlyMarket(
+    market: HourlyMarket,
+    customThreshold?: number,
+    customBetSize?: number
+  ): {
     upPrice: number;
     downPrice: number;
     combinedCost: number;
     isViable: boolean;
     viableSide: 'up' | 'down' | null;
     expectedValue: number;
+    threshold: number;
   } {
     const upPrice = market.upToken.price;
     const downPrice = market.downToken.price;
     const combinedCost = upPrice + downPrice;
+    const threshold = customThreshold ?? this.getThreshold();
+    const betSize = customBetSize ?? this.config.betSize;
 
     let isViable = false;
     let viableSide: 'up' | 'down' | null = null;
     let expectedValue = 0;
 
-    if (upPrice >= EXPENSIVE_THRESHOLD) {
+    if (upPrice >= threshold) {
       isViable = true;
       viableSide = 'up';
       const winRate = getExpectedWinRate(upPrice);
-      expectedValue = (winRate * 1.0 - upPrice) * (this.config.betSize / upPrice);
-    } else if (downPrice >= EXPENSIVE_THRESHOLD) {
+      expectedValue = (winRate * 1.0 - upPrice) * (betSize / upPrice);
+    } else if (downPrice >= threshold) {
       isViable = true;
       viableSide = 'down';
       const winRate = getExpectedWinRate(downPrice);
-      expectedValue = (winRate * 1.0 - downPrice) * (this.config.betSize / downPrice);
+      expectedValue = (winRate * 1.0 - downPrice) * (betSize / downPrice);
     }
 
     return {
@@ -171,6 +206,7 @@ export class StraddleCalculator {
       isViable,
       viableSide,
       expectedValue,
+      threshold,
     };
   }
 
