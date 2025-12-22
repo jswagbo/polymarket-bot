@@ -130,9 +130,10 @@ export class RuntimeConfig {
     this.cryptoSettings.set(crypto, current);
   }
 
-  // Check if a specific crypto is enabled (requires both global and crypto-specific)
+  // Check if a specific crypto is enabled (individual OR global)
+  // Global toggle acts as master switch, but individual cryptos can be enabled independently
   isCryptoEnabled(crypto: CryptoType): boolean {
-    return this.botEnabled && this.getCryptoSettings(crypto).enabled;
+    return this.getCryptoSettings(crypto).enabled || this.botEnabled;
   }
 
   // Get the minimum price threshold for a crypto

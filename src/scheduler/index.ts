@@ -32,6 +32,10 @@ export class TradingScheduler {
   private isClaimRunning = false;
   private lastScanTime: Date | null = null;
   private lastClaimTime: Date | null = null;
+  private lastApiCallTime: Date | null = null;
+  
+  // Minimum time between API calls to avoid rate limiting (5 seconds)
+  private minScanIntervalMs = 5000;
   
   // Store market data for each crypto separately
   private marketDataByCrypto: Map<CryptoType, LiveMarketData[]> = new Map();
@@ -80,16 +84,16 @@ export class TradingScheduler {
   }
 
   /**
-   * Start the scheduler (runs every 30 seconds by default)
+   * Start the scheduler (runs every 1 second by default for fast opportunity capture)
    * Note: 6-field cron format for seconds: seconds minutes hours day month weekday
    */
-  start(cronExpression: string = '*/30 * * * * *'): void {
+  start(cronExpression: string = '*/1 * * * * *'): void {
     if (this.cronJob) {
       logger.warn('Scheduler already running');
       return;
     }
 
-    logger.info(`Starting scheduler with cron: ${cronExpression} (every 30 seconds)`);
+    logger.info(`Starting scheduler with cron: ${cronExpression} (every 1 second)`);
     logger.info(`Trading window: minutes ${this.tradingWindowStart}-${this.tradingWindowEnd} of each hour`);
 
     this.cronJob = cron.schedule(cronExpression, async () => {
@@ -190,23 +194,50 @@ export class TradingScheduler {
   }
 
   /**
+   * Check if any crypto is enabled for trading
+   */
+  private isAnyCryptoEnabled(): boolean {
+    for (const crypto of SUPPORTED_CRYPTOS) {
+      const settings = this.runtimeConfig.getCryptoSettings(crypto as ConfigCryptoType);
+      if (settings.enabled) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Run a single market scan and execute trades for ALL crypto types
    * NEW STRATEGY: Buy expensive side (≥ per-crypto threshold) only
    */
   async runScan(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Scan already in progress, skipping...');
+      // Skip silently if already running to avoid log spam at 1-second interval
       return;
     }
 
-    // Check if global bot is enabled
-    if (!this.runtimeConfig.botEnabled) {
-      logger.debug('Bot is disabled, skipping scan');
+    // Check if global bot is enabled OR any individual crypto is enabled
+    const globalEnabled = this.runtimeConfig.botEnabled;
+    const anyCryptoEnabled = this.isAnyCryptoEnabled();
+    
+    if (!globalEnabled && !anyCryptoEnabled) {
+      // Skip silently to avoid log spam
       return;
+    }
+
+    // Rate limiting: don't hit API more than once every 5 seconds
+    const now = new Date();
+    if (this.lastApiCallTime) {
+      const timeSinceLastScan = now.getTime() - this.lastApiCallTime.getTime();
+      if (timeSinceLastScan < this.minScanIntervalMs) {
+        // Skip this scan, too soon
+        return;
+      }
     }
 
     this.isRunning = true;
-    this.lastScanTime = new Date();
+    this.lastScanTime = now;
+    this.lastApiCallTime = now;
     logger.info('=== STARTING MULTI-CRYPTO MARKET SCAN (Per-Crypto Configurable Strategy) ===');
 
     try {
@@ -221,7 +252,8 @@ export class TradingScheduler {
         try {
           // Get per-crypto settings
           const cryptoSettings = this.runtimeConfig.getCryptoSettings(crypto as ConfigCryptoType);
-          const isEnabled = this.runtimeConfig.isCryptoEnabled(crypto as ConfigCryptoType);
+          // Individual crypto enabled OR global enabled (backwards compatible)
+          const isEnabled = cryptoSettings.enabled || this.runtimeConfig.botEnabled;
           const minPrice = cryptoSettings.minPrice;
           const betSize = cryptoSettings.betSize;
           const thresholdPct = (minPrice * 100).toFixed(0);
@@ -332,7 +364,8 @@ export class TradingScheduler {
         try {
           // Get per-crypto settings
           const cryptoSettings = this.runtimeConfig.getCryptoSettings(c as ConfigCryptoType);
-          const isEnabled = this.runtimeConfig.isCryptoEnabled(c as ConfigCryptoType);
+          // Individual crypto enabled OR global enabled (backwards compatible)
+          const isEnabled = cryptoSettings.enabled || this.runtimeConfig.botEnabled;
           const minPrice = cryptoSettings.minPrice;
           const betSize = cryptoSettings.betSize;
           
