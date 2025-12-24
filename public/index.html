@@ -2417,9 +2417,13 @@
     }
 
     function renderLiveMarkets(markets, crypto = 'BTC') {
-      const containerId = crypto === 'BTC' ? 'liveMarketsContainer' : `${crypto.toLowerCase()}LiveMarketsContainer`;
+      // Container IDs: BTC uses 'liveMarketsContainer', others use '{crypto}MarketsContainer'
+      const containerId = crypto === 'BTC' ? 'liveMarketsContainer' : `${crypto.toLowerCase()}MarketsContainer`;
       const container = document.getElementById(containerId);
-      if (!container) return;
+      if (!container) {
+        console.error(`Container not found: ${containerId}`);
+        return;
+      }
       
       if (!markets || markets.length === 0) {
         container.innerHTML = `
