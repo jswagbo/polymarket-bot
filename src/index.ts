@@ -1,4 +1,4 @@
-import { loadConfig, RuntimeConfig } from './config';
+import { loadConfig, RuntimeConfig, ALL_CRYPTOS, CryptoType } from './config';
 import { getPolymarketClient } from './polymarket/client';
 import { Database } from './db/database';
 import { TradingScheduler } from './scheduler';
@@ -19,7 +19,7 @@ async function main() {
   logger.info('Initializing database...');
   const db = new Database(config.dataDir);
 
-  // Restore persisted config
+  // Restore persisted global config
   const savedBetSize = db.getState('betSize');
   const savedBotEnabled = db.getState('botEnabled');
   const savedMaxCombinedCost = db.getState('maxCombinedCost');
@@ -27,6 +27,25 @@ async function main() {
   if (savedBetSize) runtimeConfig.update({ betSize: parseFloat(savedBetSize) });
   if (savedBotEnabled) runtimeConfig.update({ botEnabled: savedBotEnabled === 'true' });
   if (savedMaxCombinedCost) runtimeConfig.update({ maxCombinedCost: parseFloat(savedMaxCombinedCost) });
+
+  // Restore per-crypto settings
+  logger.info('Loading per-crypto settings...');
+  for (const crypto of ALL_CRYPTOS) {
+    const savedEnabled = db.getState(`crypto_${crypto}_enabled`);
+    const savedCryptoBetSize = db.getState(`crypto_${crypto}_betSize`);
+    const savedMinPrice = db.getState(`crypto_${crypto}_minPrice`);
+    
+    if (savedEnabled !== null || savedCryptoBetSize !== null || savedMinPrice !== null) {
+      const updates: Partial<{ enabled: boolean; betSize: number; minPrice: number }> = {};
+      
+      if (savedEnabled !== null) updates.enabled = savedEnabled === 'true';
+      if (savedCryptoBetSize !== null) updates.betSize = parseFloat(savedCryptoBetSize);
+      if (savedMinPrice !== null) updates.minPrice = parseFloat(savedMinPrice);
+      
+      runtimeConfig.updateCryptoSettings(crypto, updates);
+      logger.info(`Loaded ${crypto} settings: enabled=${updates.enabled}, betSize=${updates.betSize}, minPrice=${updates.minPrice}`);
+    }
+  }
 
   // Initialize Polymarket client
   logger.info('Initializing Polymarket client...');
@@ -54,8 +73,8 @@ async function main() {
   logger.info('Initializing Weather scheduler...');
   const weatherScheduler = new WeatherScheduler(client, db, runtimeConfig);
 
-  // Start BTC scheduler (runs every 30 seconds)
-  scheduler.start('*/30 * * * * *');
+  // Start scheduler (runs every 1 second, with 5-second API rate limiting)
+  scheduler.start();
 
   // Create and start API server
   logger.info('Starting API server...');
