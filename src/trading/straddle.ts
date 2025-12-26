@@ -12,7 +12,7 @@ const logger = createLogger('StrategyCalculator');
  */
 
 // Default threshold if not specified
-const DEFAULT_THRESHOLD = 0.80; // 80¢ = trigger to buy
+const DEFAULT_THRESHOLD = 0.90; // 90¢ = trigger to buy
 
 // Expected win rate for options at different price points
 function getExpectedWinRate(price: number): number {

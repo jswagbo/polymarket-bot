@@ -42,7 +42,7 @@ export function loadConfig(): Config {
   return {
     privateKey: getEnvVar('PRIVATE_KEY', ''),
     dashboardPassword: getEnvVar('DASHBOARD_PASSWORD', 'changeme'),
-    betSize: getEnvNumber('BET_SIZE', 10),
+    betSize: getEnvNumber('BET_SIZE', 90),
     botEnabled: getEnvBool('BOT_ENABLED', false),
     port: getEnvNumber('PORT', 3000),
     nodeEnv: getEnvVar('NODE_ENV', 'development'),
@@ -64,8 +64,8 @@ export interface CryptoSettings {
 // Default settings for each crypto
 const DEFAULT_CRYPTO_SETTINGS: CryptoSettings = {
   enabled: true,
-  betSize: 10,
-  minPrice: 0.80,  // 80¢ threshold
+  betSize: 90,      // $90 default bet
+  minPrice: 0.90,   // 90% threshold
 };
 
 // Runtime configuration that can be updated
@@ -95,13 +95,13 @@ export class RuntimeConfig {
     this.botEnabled = config.botEnabled;
     this.maxCombinedCost = 1.05;
     
-    // Initialize per-crypto settings with defaults
+    // Initialize per-crypto settings with defaults ($90 bet, 90% threshold)
     this.cryptoSettings = new Map();
     ALL_CRYPTOS.forEach(crypto => {
       this.cryptoSettings.set(crypto, {
         enabled: true,
-        betSize: config.betSize,
-        minPrice: 0.80,
+        betSize: config.betSize || 90,
+        minPrice: 0.90,
       });
     });
   }

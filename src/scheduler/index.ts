@@ -395,10 +395,13 @@ export class TradingScheduler {
           const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets, minPrice, betSize);
           totalOpportunities += opportunities.length;
           
-          // Only execute trades if this specific crypto is enabled
-          if (opportunities.length > 0 && isEnabled) {
+          // Only execute trades if this specific crypto is enabled AND in trading window
+          const inWindow = this.isInTradingWindow();
+          if (opportunities.length > 0 && isEnabled && inWindow) {
             const trades = await this.executor.executeSingleLegTrades(opportunities);
             totalTradesExecuted += trades.length;
+          } else if (opportunities.length > 0 && !inWindow) {
+            logger.info(`⏰ ${c} has opportunities but outside trading window (minute ${new Date().getMinutes()})`);
           }
         } catch (err) {
           logger.error(`Force scan failed for ${c}:`, err);
