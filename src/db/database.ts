@@ -80,6 +80,18 @@ export class TradeDatabase {
     } catch (e) {
       // Column already exists
     }
+    try {
+      this.db.exec(`ALTER TABLE trades ADD COLUMN exit_price REAL`);
+      logger.info('Added exit_price column');
+    } catch (e) {
+      // Column already exists
+    }
+    try {
+      this.db.exec(`ALTER TABLE trades ADD COLUMN resolved_price REAL`);
+      logger.info('Added resolved_price column');
+    } catch (e) {
+      // Column already exists
+    }
 
     // Create indexes for faster queries
     this.db.exec(`

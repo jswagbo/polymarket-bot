@@ -545,6 +545,9 @@ export function createServer(
         'Market',
         'Type',
         'Side',
+        'Entry Price',
+        'Exit Price',
+        'Resolved Price',
         'UP Price',
         'DOWN Price',
         'UP Size',
@@ -560,6 +563,15 @@ export function createServer(
         const createdAt = new Date(trade.created_at);
         const resolvedAt = trade.resolved_at ? new Date(trade.resolved_at) : null;
         
+        // Entry price is the price we bought at
+        const entryPrice = trade.side === 'up' ? trade.up_price : trade.side === 'down' ? trade.down_price : (trade.up_price + trade.down_price) / 2;
+        
+        // Exit price: price when manually sold/cashed out
+        const exitPrice = trade.exit_price;
+        
+        // Resolved price: 1.00 if won, 0.00 if lost (stored in resolved_price field)
+        const resolvedPrice = trade.resolved_price;
+        
         return [
           trade.id,
           createdAt.toISOString().split('T')[0],
@@ -567,6 +579,9 @@ export function createServer(
           `"${(trade.market_question || trade.market_id).replace(/"/g, '""')}"`,
           trade.trade_type || 'single_leg',
           trade.side?.toUpperCase() || 'N/A',
+          entryPrice?.toFixed(4) || '',
+          exitPrice !== null && exitPrice !== undefined ? exitPrice.toFixed(4) : '',
+          resolvedPrice !== null && resolvedPrice !== undefined ? resolvedPrice.toFixed(2) : '',
           trade.up_price?.toFixed(4) || '',
           trade.down_price?.toFixed(4) || '',
           trade.up_size?.toFixed(2) || '',

@@ -80,6 +80,8 @@ export interface Trade {
   pnl?: number;
   created_at: string;
   resolved_at?: string;
+  exit_price?: number;      // Price when manually sold/cashed out
+  resolved_price?: number;  // 1.00 if won, 0.00 if lost on market resolution
 }
 
 export type TradeStatus = 

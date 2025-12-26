@@ -48,3 +48,4 @@ Once you've captured requests, look for:
 
 Share the cURL commands or HAR file and I'll analyze them to update the bot!
 
+
