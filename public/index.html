@@ -1579,8 +1579,8 @@
     const botStatus = document.getElementById('botStatus');
     const botToggle = document.getElementById('botToggle');
     const toggleLabel = document.getElementById('toggleLabel');
-    const betSizeInput = document.getElementById('betSizeInput');
-    const maxCostInput = document.getElementById('maxCostInput');
+    const betSizeInput = document.getElementById('btcBetSizeInput');
+    const maxCostInput = document.getElementById('btcMinPriceInput'); // Using min price as placeholder
     const toastContainer = document.getElementById('toastContainer');
 
     // Initialize
@@ -1827,9 +1827,10 @@
 
     async function saveConfig() {
       try {
+        const betSize = betSizeInput ? parseFloat(betSizeInput.value) : 90;
         await apiCall('/config', 'POST', {
-          betSize: parseFloat(betSizeInput.value),
-          maxCombinedCost: parseFloat(maxCostInput.value),
+          betSize: betSize,
+          maxCombinedCost: 1.05, // Fixed default
         });
         showToast('Configuration saved', 'success');
       } catch (error) {
@@ -1974,15 +1975,12 @@
       });
 
       // Config - update BTC inputs (primary)
-      betSizeInput.value = data.config.betSize;
-      maxCostInput.value = data.config.maxCombinedCost;
+      if (betSizeInput) betSizeInput.value = data.config.betSize;
       
       // Also sync config to other crypto tabs
       ['eth'].forEach(prefix => {
         const betInput = document.getElementById(`${prefix}BetSizeInput`);
-        const costInput = document.getElementById(`${prefix}MaxCostInput`);
         if (betInput) betInput.value = data.config.betSize;
-        if (costInput) costInput.value = data.config.maxCombinedCost;
       });
       
       updateBotState(data.config.botEnabled);
