@@ -289,8 +289,10 @@ export function createServer(
   app.post('/api/bot/scan/:crypto', async (req: Request, res: Response) => {
     try {
       const crypto = req.params.crypto.toUpperCase() as CryptoType;
+      logger.info(`Force scan requested for: ${crypto}`);
       
       if (!SUPPORTED_CRYPTOS.includes(crypto)) {
+        logger.warn(`Invalid crypto requested: ${crypto}`);
         res.status(400).json({ 
           success: false, 
           error: `Invalid crypto: ${crypto}. Supported: ${SUPPORTED_CRYPTOS.join(', ')}` 
@@ -298,11 +300,14 @@ export function createServer(
         return;
       }
       
+      logger.info(`Starting force scan for ${crypto}...`);
       const result = await scheduler.forceScan(crypto);
+      logger.info(`Force scan complete for ${crypto}: ${JSON.stringify(result)}`);
+      
       res.json({ success: true, data: result, crypto });
-    } catch (error) {
-      logger.error('Failed to run scan', error);
-      res.status(500).json({ success: false, error: String(error) });
+    } catch (error: any) {
+      logger.error(`Failed to run scan for ${req.params.crypto}:`, error);
+      res.status(500).json({ success: false, error: error.message || String(error) });
     }
   });
 

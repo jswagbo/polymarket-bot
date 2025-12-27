@@ -2399,14 +2399,26 @@
     }
     
     async function forceScanCrypto(crypto) {
+      console.log(`[forceScanCrypto] Starting scan for ${crypto}`);
       try {
         showToast(`Scanning ${crypto} markets...`, 'success');
-        const { data } = await apiCall(`/bot/scan/${crypto}`, 'POST');
-        showToast(`${crypto} scan complete! Found ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
+        console.log(`[forceScanCrypto] Calling API: /bot/scan/${crypto}`);
+        
+        const response = await apiCall(`/bot/scan/${crypto}`, 'POST');
+        console.log(`[forceScanCrypto] API response:`, response);
+        
+        const data = response.data;
+        if (data) {
+          showToast(`${crypto} scan complete! Found ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
+        } else {
+          showToast(`${crypto} scan complete!`, 'success');
+        }
         
         // Refresh the markets display for this crypto
+        console.log(`[forceScanCrypto] Refreshing markets display for ${crypto}`);
         await fetchSingleCryptoMarkets(crypto);
       } catch (error) {
+        console.error(`[forceScanCrypto] Error scanning ${crypto}:`, error);
         showToast(`Failed to scan ${crypto}: ${error.message}`, 'error');
       }
     }
