@@ -413,8 +413,10 @@ export class TradingScheduler {
               logger.info(`⏰ ${c} has ${opportunities.length} opportunity(ies) but outside trading window (minute ${new Date().getMinutes()})`);
             }
           }
-        } catch (err) {
-          logger.error(`Force scan failed for ${c}:`, err);
+        } catch (err: any) {
+          logger.error(`Force scan failed for ${c}: ${err.message}`);
+          logger.error(`Stack: ${err.stack}`);
+          // Don't throw - continue with other cryptos
         }
       }
 

@@ -301,10 +301,20 @@ export function createServer(
       }
       
       logger.info(`Starting force scan for ${crypto}...`);
-      const result = await scheduler.forceScan(crypto);
-      logger.info(`Force scan complete for ${crypto}: ${JSON.stringify(result)}`);
       
-      res.json({ success: true, data: result, crypto });
+      try {
+        const result = await scheduler.forceScan(crypto);
+        logger.info(`Force scan complete for ${crypto}: ${JSON.stringify(result)}`);
+        res.json({ success: true, data: result, crypto });
+      } catch (scanError: any) {
+        logger.error(`Scan execution error for ${crypto}:`, scanError);
+        logger.error(`Stack trace:`, scanError.stack);
+        res.status(500).json({ 
+          success: false, 
+          error: scanError.message || 'Scan failed',
+          details: scanError.stack?.split('\n').slice(0, 3).join('\n')
+        });
+      }
     } catch (error: any) {
       logger.error(`Failed to run scan for ${req.params.crypto}:`, error);
       res.status(500).json({ success: false, error: error.message || String(error) });
