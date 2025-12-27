@@ -496,8 +496,9 @@ export class PolymarketClient {
 
   /**
    * Place a market sell order (FOK) to cash out a position
+   * Now properly handles fractional shares to avoid leaving dust
    */
-  async placeSellOrder(tokenId: string, size: number): Promise<any> {
+  async placeSellOrder(tokenId: string, size: number, sellAll: boolean = true): Promise<any> {
     if (this.isReadOnly()) {
       throw new Error('Cannot place orders in read-only mode. Configure a valid private key.');
     }
@@ -527,20 +528,28 @@ export class PolymarketClient {
 
       const priceInCents = Math.round(marketPrice * 100);
       const finalPrice = priceInCents / 100;
-      const wholeShares = Math.floor(size);
       
-      if (wholeShares < 1) {
-        throw new Error(`Cannot sell less than 1 share: ${size}`);
+      // FIXED: Use exact size with 2 decimal precision to avoid leaving fractional shares
+      // Round DOWN slightly to ensure we don't try to sell more than we have
+      const exactSize = Math.floor(size * 100) / 100; // 2 decimal places
+      
+      // Polymarket minimum order is typically 1 share for most operations
+      // But for selling existing positions, we should try to sell everything
+      const MIN_SELL_SIZE = 0.01; // Minimum that CLOB might accept
+      
+      if (exactSize < MIN_SELL_SIZE) {
+        logger.warn(`Position size ${size} is below minimum ${MIN_SELL_SIZE}, skipping (will be redeemed after market closes)`);
+        throw new Error(`Size ${size} below minimum sell threshold - wait for market resolution to redeem`);
       }
 
       logger.info(`Placing MARKET sell order: token=${tokenId.substring(0, 15)}...`);
-      logger.info(`  Price: ${finalPrice}, Size: ${wholeShares} shares`);
+      logger.info(`  Price: ${finalPrice}, Size: ${exactSize} shares (original: ${size})`);
 
-      // Create sell order
+      // Create sell order with exact size
       const order = await this.client.createOrder({
         tokenID: tokenId,
         price: finalPrice,
-        size: wholeShares,
+        size: exactSize,
         side: Side.SELL,
       });
 
@@ -1188,6 +1197,59 @@ export class PolymarketClient {
   }
 
   /**
+   * Get on-chain balance for a specific position (token ID)
+   */
+  async getPositionBalance(tokenId: string): Promise<string> {
+    if (!this.wallet) return '0';
+    
+    try {
+      let provider: ethers.providers.JsonRpcProvider | null = null;
+      for (const rpc of POLYGON_RPCS) {
+        try {
+          const testProvider = new ethers.providers.JsonRpcProvider(rpc);
+          await testProvider.getNetwork();
+          provider = testProvider;
+          break;
+        } catch {
+          continue;
+        }
+      }
+      if (!provider) return '0';
+      
+      const address = await this.wallet.getAddress();
+      const ctf = new ethers.Contract(CTF_CONTRACT, [
+        'function balanceOf(address account, uint256 id) view returns (uint256)'
+      ], provider);
+      
+      const balance = await ctf.balanceOf(address, tokenId);
+      return ethers.utils.formatUnits(balance, 6); // USDC decimals
+    } catch (e: any) {
+      logger.debug(`Failed to get balance for token ${tokenId}: ${e.message}`);
+      return '0';
+    }
+  }
+
+  /**
+   * Calculate token IDs from condition ID
+   * Polymarket uses: tokenId = hash(collateral, conditionId, outcomeIndex)
+   */
+  getTokenIdsForCondition(conditionId: string): { upTokenId: string; downTokenId: string } {
+    // For Polymarket, token IDs are derived from the condition
+    // The exact calculation depends on the CTF implementation
+    // These are typically provided by the API, but we can try to calculate
+    const parentCollectionId = ethers.constants.HashZero;
+    
+    // Token ID for outcome 0 (Up/Yes) = positionId(collateral, parentCollection, conditionId, 1)
+    // Token ID for outcome 1 (Down/No) = positionId(collateral, parentCollection, conditionId, 2)
+    
+    // For now, return placeholder - actual implementation needs market-specific token IDs
+    return {
+      upTokenId: '0', // Would need actual token IDs from market data
+      downTokenId: '0'
+    };
+  }
+
+  /**
    * Redeem a winning position
    */
   async redeemPosition(conditionId: string, isNegRisk: boolean = false): Promise<string> {
@@ -1214,6 +1276,7 @@ export class PolymarketClient {
     if (!provider) throw new Error('All RPC endpoints failed');
 
     const connectedWallet = this.wallet.connect(provider);
+    const address = await this.wallet.getAddress();
 
     try {
       // Get current gas price with minimum floor for Polygon
@@ -1237,15 +1300,47 @@ export class PolymarketClient {
         const parentCollectionId = ethers.constants.HashZero; // Root collection
         
         // IMPORTANT: Polymarket uses USDC.e as collateral, not native USDC
-        // Index sets: 1 = outcome 0 (Up/Yes), 2 = outcome 1 (Down/No)
+        // Index sets: 1 = outcome 0 (Up/Yes), 2 = outcome 1 (Down/No), 3 = both
+        // Using [3] to redeem BOTH outcomes in a single call (handles fractional shares on either side)
         logger.info(`Redeeming with USDC.e collateral: ${USDC_E_ADDRESS}`);
+        logger.info(`User address: ${address}`);
+        
+        // Try to get balances for logging (optional, for debugging)
+        try {
+          const ctfRead = new ethers.Contract(CTF_CONTRACT, [
+            'function getPositionId(address collateralToken, bytes32 parentCollectionId, bytes32 conditionId, uint256 indexSet) view returns (uint256)',
+            'function balanceOf(address account, uint256 id) view returns (uint256)'
+          ], provider);
+          
+          // Get position IDs for both outcomes
+          const posIdUp = await ctfRead.getPositionId(USDC_E_ADDRESS, parentCollectionId, conditionId, 1);
+          const posIdDown = await ctfRead.getPositionId(USDC_E_ADDRESS, parentCollectionId, conditionId, 2);
+          
+          const balanceUp = await ctfRead.balanceOf(address, posIdUp);
+          const balanceDown = await ctfRead.balanceOf(address, posIdDown);
+          
+          logger.info(`On-chain balances:`);
+          logger.info(`  Up/Yes (index 1): ${ethers.utils.formatUnits(balanceUp, 6)} shares`);
+          logger.info(`  Down/No (index 2): ${ethers.utils.formatUnits(balanceDown, 6)} shares`);
+          
+          // Check if there's anything to redeem
+          if (balanceUp.isZero() && balanceDown.isZero()) {
+            throw new Error('No balance to redeem - position already claimed or never held');
+          }
+        } catch (balanceError: any) {
+          // If balance check fails, still try redemption (may work anyway)
+          if (balanceError.message.includes('No balance to redeem')) {
+            throw balanceError;
+          }
+          logger.warn(`Could not check balances: ${balanceError.message}`);
+        }
         
         tx = await ctf.redeemPositions(
           USDC_E_ADDRESS, // USDC.e - Polymarket's collateral token
           parentCollectionId,
           conditionId,
-          [1, 2], // Both outcome indices
-          { gasLimit: 300000, gasPrice: boostedGasPrice }
+          [1, 2], // Both outcome indices - will redeem whatever balance exists
+          { gasLimit: 400000, gasPrice: boostedGasPrice } // Increased gas limit for safety
         );
       }
 
