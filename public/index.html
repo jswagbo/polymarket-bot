@@ -1408,10 +1408,14 @@
         <h2 class="card-title">💰 Positions & Winnings</h2>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="btn btn-secondary" id="refreshPositionsBtn">🔄 Refresh</button>
-          <button class="btn btn-primary" id="claimAllBtn">💵 Claim Winnings</button>
+          <button class="btn btn-secondary" id="checkClaimableBtn">🔍 Check Claimable</button>
+          <button class="btn btn-primary" id="claimAllBtn">💵 Claim All Winnings</button>
           <button class="btn btn-secondary" id="approveSellBtn">🔓 Approve Selling</button>
           <button class="btn btn-danger" id="cashOutBtn">💸 Cash Out All</button>
         </div>
+      </div>
+      <div id="claimableInfo" style="display: none; padding: 12px 16px; background: var(--accent-glow); border: 1px solid var(--accent-primary); border-radius: 8px; margin-bottom: 16px;">
+        <span id="claimableCount" style="color: var(--accent-primary); font-weight: 600;"></span>
       </div>
       <div id="positionsContainer">
         <div class="empty-state">
@@ -1608,12 +1612,15 @@
     const cashOutBtn = document.getElementById('cashOutBtn');
     const approveSellBtn = document.getElementById('approveSellBtn');
     
+    const checkClaimableBtn = document.getElementById('checkClaimableBtn');
+    
     if (emergencyStopBtn) emergencyStopBtn.addEventListener('click', emergencyStop);
     if (resetBtn) resetBtn.addEventListener('click', resetBot);
     if (approveBtn) approveBtn.addEventListener('click', approveUsdc);
     if (refreshTradesBtn) refreshTradesBtn.addEventListener('click', () => fetchStats());
     if (refreshMarketsBtn) refreshMarketsBtn.addEventListener('click', fetchLiveMarkets);
     if (refreshPositionsBtn) refreshPositionsBtn.addEventListener('click', fetchPositions);
+    if (checkClaimableBtn) checkClaimableBtn.addEventListener('click', checkClaimable);
     if (claimAllBtn) claimAllBtn.addEventListener('click', claimAllWinnings);
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportTradesToCsv);
     if (cashOutBtn) cashOutBtn.addEventListener('click', cashOutAll);
@@ -1702,6 +1709,36 @@
       }
     }
 
+    async function checkClaimable() {
+      try {
+        const btn = document.getElementById('checkClaimableBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Checking...';
+        
+        const result = await apiCall('/positions/claimable');
+        const claimableInfo = document.getElementById('claimableInfo');
+        const claimableCount = document.getElementById('claimableCount');
+        
+        if (result.success && result.data && result.data.length > 0) {
+          claimableInfo.style.display = 'block';
+          claimableCount.innerHTML = '🎉 Found <strong>' + result.data.length + '</strong> claimable position(s)! Click "Claim All Winnings" to redeem.';
+          showToast('Found ' + result.data.length + ' claimable positions!', 'success');
+        } else {
+          claimableInfo.style.display = 'block';
+          claimableCount.innerHTML = '📭 No claimable positions found. Positions may still be active or already claimed.';
+          showToast('No claimable positions found', 'warning');
+        }
+      } catch (error) {
+        showToast('Failed to check claimable: ' + error.message, 'error');
+        const claimableInfo = document.getElementById('claimableInfo');
+        claimableInfo.style.display = 'none';
+      } finally {
+        const btn = document.getElementById('checkClaimableBtn');
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Check Claimable';
+      }
+    }
+
     async function claimAllWinnings() {
       if (!confirm('Claim all available winnings? This will send transactions to the blockchain.')) return;
       
@@ -1713,6 +1750,10 @@
         await apiCall('/positions/claim', 'POST');
         showToast('Claim started! Check Railway logs for progress.', 'success');
         
+        // Hide the claimable info after claiming
+        const claimableInfo = document.getElementById('claimableInfo');
+        if (claimableInfo) claimableInfo.style.display = 'none';
+        
         // Refresh positions after a delay
         setTimeout(fetchPositions, 5000);
       } catch (error) {
@@ -1720,7 +1761,7 @@
       } finally {
         const btn = document.getElementById('claimAllBtn');
         btn.disabled = false;
-        btn.innerHTML = '💵 Claim Winnings';
+        btn.innerHTML = '💵 Claim All Winnings';
       }
     }
 
