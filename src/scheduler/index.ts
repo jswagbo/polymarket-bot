@@ -128,6 +128,8 @@ export class TradingScheduler {
 
   /**
    * Run auto-claim for resolved winning positions
+   * Uses brute-force approach: scans ALL resolved hourly markets and attempts to redeem each
+   * This is the same workflow that works for manual claiming
    */
   async runAutoClaim(): Promise<void> {
     if (this.isClaimRunning) {
@@ -142,31 +144,27 @@ export class TradingScheduler {
 
     this.isClaimRunning = true;
     this.lastClaimTime = new Date();
-    logger.info('=== STARTING AUTO-CLAIM CHECK ===');
+    logger.info('=== STARTING AUTO-CLAIM (BRUTE FORCE APPROACH) ===');
 
     try {
-      // Get claimable positions
-      const claimable = await this.client.getClaimablePositions();
-      
-      if (claimable.length === 0) {
-        logger.info('No claimable positions found');
-        return;
-      }
-
-      logger.info(`Found ${claimable.length} claimable position(s), attempting to claim...`);
-      
-      const result = await this.client.claimAllWinnings();
+      // Use brute-force approach: scan all resolved hourly markets from last 7 days
+      // and attempt to redeem each one. Markets where user has no position will be skipped.
+      // This is the EXACT same workflow that works for manual claiming.
+      const result = await this.client.claimAllResolvedHourly(7);
       
       if (result.success > 0) {
         logger.info(`✅ AUTO-CLAIM COMPLETE: ${result.success} position(s) claimed!`);
-        result.txHashes.forEach(hash => {
-          logger.info(`  Transaction: https://polygonscan.com/tx/${hash}`);
-        });
+      }
+      
+      if (result.skipped > 0) {
+        logger.info(`⏭️ Skipped ${result.skipped} markets (no position or already claimed)`);
       }
       
       if (result.failed > 0) {
         logger.warn(`⚠️ ${result.failed} position(s) failed to claim`);
       }
+      
+      logger.info(`Auto-claim summary: ${result.attempted} attempted, ${result.success} success, ${result.skipped} skipped, ${result.failed} failed`);
 
     } catch (error) {
       logger.error('Auto-claim failed:', error);

@@ -1398,47 +1398,95 @@ export class PolymarketClient {
 
   /**
    * Get all resolved markets from hourly crypto series
+   * Uses the series endpoint approach (same as live market scanning)
+   * Includes BTC, ETH, and SOL markets
    */
   async getResolvedHourlyMarkets(daysBack: number = 7): Promise<any[]> {
-    const seriesSlugs = ['btc-up-or-down-hourly', 'eth-up-or-down-hourly'];
-    const allMarkets: any[] = [];
+    // Series IDs for hourly crypto markets (verified working)
+    const CLAIM_SERIES_IDS: Record<string, string> = {
+      'BTC': '10114',  // BTC Up or Down Hourly
+      'ETH': '10117',  // ETH Up or Down Hourly
+      'SOL': '10122',  // SOL Up or Down Hourly
+    };
     
-    for (const seriesSlug of seriesSlugs) {
+    const allMarkets: any[] = [];
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    const now = new Date();
+    
+    logger.info(`=== Scanning resolved hourly markets (last ${daysBack} days) ===`);
+    logger.info(`Cutoff date: ${cutoffDate.toISOString()}`);
+    
+    for (const [crypto, seriesId] of Object.entries(CLAIM_SERIES_IDS)) {
       try {
-        const url = `${GAMMA_API_URL}/events?series_slug=${seriesSlug}&closed=true&limit=200`;
-        logger.info(`Fetching resolved markets from: ${url}`);
+        // Use series endpoint (same approach as live market scanning)
+        const url = `${GAMMA_API_URL}/series/${seriesId}`;
+        logger.info(`Fetching ${crypto} series from: ${url}`);
         
         const response = await fetch(url);
-        if (!response.ok) continue;
+        if (!response.ok) {
+          logger.warn(`Failed to fetch ${crypto} series: HTTP ${response.status}`);
+          continue;
+        }
         
-        const events = await response.json() as any[];
+        const series = await response.json() as any;
+        const events = series.events || [];
+        logger.info(`${crypto} series has ${events.length} total events`);
         
-        // Filter to only include markets resolved in the last X days
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+        let countRecent = 0;
         
         for (const event of events) {
-          if (event.markets && event.markets.length > 0) {
-            const market = event.markets[0];
-            const closedTime = new Date(market.closedTime || event.closedTime);
-            
-            if (closedTime > cutoffDate && market.conditionId) {
-              allMarkets.push({
-                title: market.question || event.title,
-                conditionId: market.conditionId,
-                closedTime: closedTime.toISOString(),
-                negRisk: market.negRisk || false,
-                outcome: market.outcomePrices // To determine winner
-              });
+          // Skip events that don't match this crypto
+          const title = (event.title || '').toLowerCase();
+          const cryptoLower = crypto.toLowerCase();
+          const cryptoName = crypto === 'BTC' ? 'bitcoin' : crypto === 'ETH' ? 'ethereum' : 'solana';
+          
+          if (!title.includes(cryptoLower) && !title.includes(cryptoName)) {
+            continue;
+          }
+          
+          // Check if event is closed/resolved
+          const endDate = new Date(event.endDate);
+          const isClosed = event.closed === true || endDate < now;
+          if (!isClosed) continue;
+          
+          // Check if within date range
+          if (endDate < cutoffDate) continue;
+          
+          // Get market details - events from series endpoint don't have embedded markets
+          // Need to fetch individual event details
+          try {
+            const eventDetails = await this.getEvent(event.id);
+            if (!eventDetails || !eventDetails.markets || eventDetails.markets.length === 0) {
+              continue;
             }
+            
+            const market = eventDetails.markets[0];
+            if (!market.conditionId) continue;
+            
+            allMarkets.push({
+              title: event.title || market.question,
+              conditionId: market.conditionId,
+              closedTime: endDate.toISOString(),
+              negRisk: market.negRisk || event.enableNegRisk || false,
+              crypto,
+            });
+            countRecent++;
+            
+            // Small delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 50));
+          } catch (fetchErr: any) {
+            logger.debug(`Failed to fetch event ${event.id}: ${fetchErr.message}`);
           }
         }
+        
+        logger.info(`${crypto}: Found ${countRecent} resolved markets within last ${daysBack} days`);
       } catch (e: any) {
-        logger.error(`Failed to fetch series ${seriesSlug}: ${e.message}`);
+        logger.error(`Failed to fetch ${crypto} series: ${e.message}`);
       }
     }
     
-    logger.info(`Found ${allMarkets.length} resolved hourly crypto markets from last ${daysBack} days`);
+    logger.info(`=== Total: ${allMarkets.length} resolved hourly crypto markets ===`);
     return allMarkets;
   }
 
