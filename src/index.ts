@@ -2,7 +2,6 @@ import { loadConfig, RuntimeConfig, ALL_CRYPTOS, CryptoType } from './config';
 import { getPolymarketClient } from './polymarket/client';
 import { Database } from './db/database';
 import { TradingScheduler } from './scheduler';
-import { WeatherScheduler } from './weather';
 import { createServer } from './api/server';
 import { createLogger } from './utils/logger';
 
@@ -65,20 +64,16 @@ async function main() {
     logger.warn('Continuing in read-only mode');
   }
 
-  // Create BTC scheduler
-  logger.info('Initializing BTC scheduler...');
+  // Create scheduler for BTC and ETH
+  logger.info('Initializing crypto scheduler...');
   const scheduler = new TradingScheduler(client, db, runtimeConfig);
-
-  // Create Weather scheduler
-  logger.info('Initializing Weather scheduler...');
-  const weatherScheduler = new WeatherScheduler(client, db, runtimeConfig);
 
   // Start scheduler (runs every 1 second, with 5-second API rate limiting)
   scheduler.start();
 
   // Create and start API server
   logger.info('Starting API server...');
-  const app = createServer(config, db, scheduler, runtimeConfig, weatherScheduler);
+  const app = createServer(config, db, scheduler, runtimeConfig);
 
   const port = config.port;
   app.listen(port, () => {
@@ -89,8 +84,8 @@ async function main() {
 ║  Dashboard: http://localhost:${port}                            ║
 ║  API: http://localhost:${port}/api                              ║
 ╠══════════════════════════════════════════════════════════════╣
-║  BTC Bot: ${runtimeConfig.botEnabled ? 'ENABLED ' : 'DISABLED'}                                        ║
-║  Weather Bot: READY (manual start)                            ║
+║  Supported: BTC, ETH (hourly markets)                         ║
+║  Bot Status: ${runtimeConfig.botEnabled ? 'ENABLED ' : 'DISABLED'}                                       ║
 ║  Bet Size: $${runtimeConfig.betSize}                                             ║
 ╚══════════════════════════════════════════════════════════════╝
     `);
@@ -100,7 +95,6 @@ async function main() {
   process.on('SIGINT', () => {
     logger.info('Shutting down...');
     scheduler.stop();
-    weatherScheduler.stop();
     db.close();
     process.exit(0);
   });
@@ -108,7 +102,6 @@ async function main() {
   process.on('SIGTERM', () => {
     logger.info('Shutting down...');
     scheduler.stop();
-    weatherScheduler.stop();
     db.close();
     process.exit(0);
   });

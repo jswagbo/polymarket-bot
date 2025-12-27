@@ -4,7 +4,6 @@ import path from 'path';
 import { Database } from '../db/database';
 import { RuntimeConfig, Config, CryptoType as ConfigCryptoType, ALL_CRYPTOS } from '../config';
 import { TradingScheduler, SUPPORTED_CRYPTOS } from '../scheduler';
-import { WeatherScheduler } from '../weather';
 import { createLogger } from '../utils/logger';
 import { ApiResponse, DashboardStats, BotStatus } from '../types';
 import { CryptoType, CRYPTO_DISPLAY_NAMES } from '../polymarket/client';
@@ -16,8 +15,7 @@ export function createServer(
   config: Config,
   db: Database,
   scheduler: TradingScheduler,
-  runtimeConfig: RuntimeConfig,
-  weatherScheduler?: WeatherScheduler
+  runtimeConfig: RuntimeConfig
 ): express.Application {
   const app = express();
   const startTime = Date.now();
@@ -666,133 +664,6 @@ export function createServer(
       });
     } catch (error) {
       logger.error('Failed to get all live markets', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  });
-
-  // ============================================
-  // WEATHER BOT ENDPOINTS
-  // ============================================
-
-  // Get weather bot status
-  app.get('/api/weather/status', (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      const status = weatherScheduler.getStatus();
-      res.json({ success: true, data: status });
-    } catch (error) {
-      logger.error('Failed to get weather status', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  });
-
-  // Get weather opportunities
-  app.get('/api/weather/opportunities', (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      const opportunities = weatherScheduler.getOpportunities();
-      res.json({ success: true, data: opportunities });
-    } catch (error) {
-      logger.error('Failed to get weather opportunities', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  });
-
-  // Get last weather scan result
-  app.get('/api/weather/scan-result', (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      const result = weatherScheduler.getLastScanResult();
-      
-      // Convert Map to object for JSON serialization
-      const serialized = result ? {
-        ...result,
-        forecasts: Object.fromEntries(result.forecasts),
-      } : null;
-      
-      res.json({ success: true, data: serialized });
-    } catch (error) {
-      logger.error('Failed to get weather scan result', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  });
-
-  // Force a weather scan
-  app.post('/api/weather/scan', async (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      
-      logger.info('Starting manual weather scan...');
-      const result = await weatherScheduler.forceScan();
-      
-      const serialized = {
-        ...result,
-        forecasts: Object.fromEntries(result.forecasts),
-      };
-      
-      res.json({ 
-        success: true, 
-        data: serialized,
-        message: `Found ${result.opportunities.length} opportunities in ${result.markets.length} markets`
-      });
-    } catch (error: any) {
-      logger.error('Weather scan failed', error);
-      res.status(500).json({ success: false, error: error.message || 'Scan failed' });
-    }
-  });
-
-  // Toggle weather bot
-  app.post('/api/weather/toggle', (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      
-      const enabled = weatherScheduler.toggle();
-      logger.info(`Weather bot ${enabled ? 'enabled' : 'disabled'}`);
-      
-      res.json({ success: true, data: { enabled } });
-    } catch (error) {
-      logger.error('Failed to toggle weather bot', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
-    }
-  });
-
-  // Update weather bot settings
-  app.post('/api/weather/settings', (req: Request, res: Response) => {
-    try {
-      if (!weatherScheduler) {
-        res.status(503).json({ success: false, error: 'Weather bot not initialized' });
-        return;
-      }
-      
-      const { minEdgeForTrade, maxTradeSize, autoTradeEnabled } = req.body;
-      
-      if (minEdgeForTrade !== undefined || maxTradeSize !== undefined) {
-        weatherScheduler.updateSettings({ minEdgeForTrade, maxTradeSize });
-      }
-      
-      if (autoTradeEnabled !== undefined) {
-        weatherScheduler.setAutoTrade(autoTradeEnabled);
-      }
-      
-      const status = weatherScheduler.getStatus();
-      res.json({ success: true, data: status });
-    } catch (error) {
-      logger.error('Failed to update weather settings', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
     }
   });

@@ -1297,18 +1297,6 @@
         <span class="tab-icon">Ξ</span>
         <span>ETH</span>
       </button>
-      <button class="main-tab" data-tab="xrp">
-        <span class="tab-icon">✕</span>
-        <span>XRP</span>
-      </button>
-      <button class="main-tab" data-tab="sol">
-        <span class="tab-icon">◎</span>
-        <span>SOL</span>
-      </button>
-      <button class="main-tab" data-tab="weather">
-        <span class="tab-icon">🌤️</span>
-        <span>Weather</span>
-      </button>
     </div>
 
     <!-- BTC Bot Tab Panel -->
@@ -1576,354 +1564,6 @@
 
     </div><!-- End ETH Panel -->
 
-    <!-- XRP Bot Tab Panel -->
-    <div id="xrp-panel" class="tab-panel">
-
-    <!-- Stats Grid -->
-    <div class="grid grid-4" style="margin-bottom: 24px;">
-      <div class="card stat-card">
-        <span class="stat-icon">📈</span>
-        <div class="stat-value" id="xrpTotalPnL">$0.00</div>
-        <div class="stat-label">Total P&L</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🎯</span>
-        <div class="stat-value" id="xrpTotalTrades">0</div>
-        <div class="stat-label">Total Trades</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏳</span>
-        <div class="stat-value" id="xrpActivePositions">0</div>
-        <div class="stat-label">Active Positions</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏱️</span>
-        <div class="stat-value" id="xrpLastScan">--</div>
-        <div class="stat-label">Last Scan</div>
-      </div>
-    </div>
-
-    <!-- Trading Window Indicator -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 1.5rem;" id="xrpWindowIcon">⏰</span>
-          <div>
-            <div style="font-weight: 600; font-size: 1rem;" id="xrpWindowStatus">Trading Window</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="xrpWindowDetails">Minutes 45-59 of each hour</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="text-align: center;">
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700;" id="xrpCurrentMinute">--</div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">Current Minute</div>
-          </div>
-          <div id="xrpWindowBadge" class="status-badge inactive" style="font-size: 0.9rem; padding: 10px 20px;">
-            <span>WAITING</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Control Panel -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">✕ XRP Bot Controls</h2>
-      </div>
-      <div class="control-panel">
-        <div class="toggle-container">
-          <div id="xrpBotToggle" class="toggle" onclick="toggleCrypto('XRP')"></div>
-          <span class="toggle-label" id="xrpToggleLabel">XRP Disabled</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Bet Size ($)</label>
-          <input type="number" id="xrpBetSizeInput" class="control-input" min="1" step="1" value="90">
-        </div>
-        <div class="control-group">
-          <label class="control-label">Min Price (¢)</label>
-          <input type="number" id="xrpMinPriceInput" class="control-input" min="50" max="99" step="1" value="90">
-        </div>
-        <button class="btn btn-secondary" onclick="saveCryptoConfig('XRP')">💾 Save XRP</button>
-        <button class="btn btn-primary" onclick="forceScanCrypto('XRP')">🔍 Scan XRP</button>
-      </div>
-    </div>
-
-    <!-- Live Markets -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">📡 XRP Live Markets</h2>
-        <button class="btn btn-secondary" onclick="fetchCryptoMarkets('XRP')">🔄 Refresh</button>
-      </div>
-      <div id="xrpMarketsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">✕</div>
-          <p>No XRP market data yet. Click "Scan XRP" to fetch live XRP Up/Down markets.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Positions & Winnings -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">💰 Positions & Winnings</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" onclick="fetchPositions()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="claimAllWinnings()">💵 Claim Winnings</button>
-          <button class="btn btn-secondary" onclick="approveSell()">🔓 Approve Selling</button>
-          <button class="btn btn-danger" onclick="cashOutAll()">💸 Cash Out All</button>
-        </div>
-      </div>
-      <div id="xrpPositionsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">💼</div>
-          <p>No positions yet. Positions will appear here once trades are made.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trades Table -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Recent Trades</h2>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" onclick="fetchStats()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="exportTradesToCsv()">📥 Export CSV</button>
-        </div>
-      </div>
-      <div id="xrpTradesContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <p>No trades yet. The bot buys when any side hits ≥90¢ (expected 99.5% win rate).</p>
-        </div>
-      </div>
-    </div>
-
-    </div><!-- End XRP Panel -->
-
-    <!-- SOL Bot Tab Panel -->
-    <div id="sol-panel" class="tab-panel">
-
-    <!-- Stats Grid -->
-    <div class="grid grid-4" style="margin-bottom: 24px;">
-      <div class="card stat-card">
-        <span class="stat-icon">📈</span>
-        <div class="stat-value" id="solTotalPnL">$0.00</div>
-        <div class="stat-label">Total P&L</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🎯</span>
-        <div class="stat-value" id="solTotalTrades">0</div>
-        <div class="stat-label">Total Trades</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏳</span>
-        <div class="stat-value" id="solActivePositions">0</div>
-        <div class="stat-label">Active Positions</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏱️</span>
-        <div class="stat-value" id="solLastScan">--</div>
-        <div class="stat-label">Last Scan</div>
-      </div>
-    </div>
-
-    <!-- Trading Window Indicator -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 1.5rem;" id="solWindowIcon">⏰</span>
-          <div>
-            <div style="font-weight: 600; font-size: 1rem;" id="solWindowStatus">Trading Window</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="solWindowDetails">Minutes 45-59 of each hour</div>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="text-align: center;">
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700;" id="solCurrentMinute">--</div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">Current Minute</div>
-          </div>
-          <div id="solWindowBadge" class="status-badge inactive" style="font-size: 0.9rem; padding: 10px 20px;">
-            <span>WAITING</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Control Panel -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">◎ Solana Bot Controls</h2>
-      </div>
-      <div class="control-panel">
-        <div class="toggle-container">
-          <div id="solBotToggle" class="toggle" onclick="toggleCrypto('SOL')"></div>
-          <span class="toggle-label" id="solToggleLabel">SOL Disabled</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Bet Size ($)</label>
-          <input type="number" id="solBetSizeInput" class="control-input" min="1" step="1" value="90">
-        </div>
-        <div class="control-group">
-          <label class="control-label">Min Price (¢)</label>
-          <input type="number" id="solMinPriceInput" class="control-input" min="50" max="99" step="1" value="90">
-        </div>
-        <button class="btn btn-secondary" onclick="saveCryptoConfig('SOL')">💾 Save SOL</button>
-        <button class="btn btn-primary" onclick="forceScanCrypto('SOL')">🔍 Scan SOL</button>
-      </div>
-    </div>
-
-    <!-- Live Markets -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">📡 SOL Live Markets</h2>
-        <button class="btn btn-secondary" onclick="fetchCryptoMarkets('SOL')">🔄 Refresh</button>
-      </div>
-      <div id="solMarketsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">◎</div>
-          <p>No SOL market data yet. Click "Scan SOL" to fetch live Solana Up/Down markets.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Positions & Winnings -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">💰 Positions & Winnings</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" onclick="fetchPositions()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="claimAllWinnings()">💵 Claim Winnings</button>
-          <button class="btn btn-secondary" onclick="approveSell()">🔓 Approve Selling</button>
-          <button class="btn btn-danger" onclick="cashOutAll()">💸 Cash Out All</button>
-        </div>
-      </div>
-      <div id="solPositionsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">💼</div>
-          <p>No positions yet. Positions will appear here once trades are made.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trades Table -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Recent Trades</h2>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" onclick="fetchStats()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="exportTradesToCsv()">📥 Export CSV</button>
-        </div>
-      </div>
-      <div id="solTradesContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <p>No trades yet. The bot buys when any side hits ≥90¢ (expected 99.5% win rate).</p>
-        </div>
-      </div>
-    </div>
-
-    </div><!-- End SOL Panel -->
-
-    <!-- Weather Bot Tab Panel -->
-    <div id="weather-panel" class="tab-panel">
-      
-      <!-- Weather Stats Grid -->
-      <div class="grid grid-4" style="margin-bottom: 24px;">
-        <div class="card stat-card">
-          <span class="stat-icon">🎯</span>
-          <div class="stat-value" id="weatherOpportunities">0</div>
-          <div class="stat-label">Opportunities</div>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-icon">🌡️</span>
-          <div class="stat-value" id="weatherMarkets">0</div>
-          <div class="stat-label">Markets Found</div>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-icon">📈</span>
-          <div class="stat-value" id="weatherTopEdge">--</div>
-          <div class="stat-label">Top Edge</div>
-        </div>
-        <div class="card stat-card">
-          <span class="stat-icon">⏱️</span>
-          <div class="stat-value" id="weatherLastScan">--</div>
-          <div class="stat-label">Last Scan</div>
-        </div>
-      </div>
-
-      <!-- Weather Controls -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-          <h2 class="card-title">🌤️ Weather Bot Controls</h2>
-        </div>
-        <div class="control-panel">
-          <div class="toggle-container">
-            <div id="weatherToggle" class="toggle"></div>
-            <span class="toggle-label" id="weatherToggleLabel">Bot Disabled</span>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Min Edge %</label>
-            <input type="number" id="weatherMinEdge" class="control-input" min="5" max="50" step="1" value="15">
-          </div>
-          <div class="control-group">
-            <label class="control-label">Max Trade $</label>
-            <input type="number" id="weatherMaxTrade" class="control-input" min="1" max="500" step="1" value="50">
-          </div>
-          <button class="btn btn-secondary" id="weatherSaveConfig">💾 Save</button>
-          <button class="btn btn-primary" id="weatherScanBtn">🔍 Scan Now</button>
-        </div>
-      </div>
-
-      <!-- Weather Opportunities -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-          <h2 class="card-title">🎯 Opportunities</h2>
-          <button class="btn btn-secondary" id="refreshWeatherOpps">🔄 Refresh</button>
-        </div>
-        <div id="weatherOpportunitiesContainer">
-          <div class="empty-state">
-            <div class="empty-state-icon">🌤️</div>
-            <p>No opportunities yet. Click "Scan Now" to find temperature markets with edge.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- City Forecasts -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="card-header">
-          <h2 class="card-title">🌡️ City Forecasts (NWS)</h2>
-        </div>
-        <div id="cityForecastsContainer" class="weather-city-grid">
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon">🏙️</div>
-            <p>Run a scan to see NWS forecasts for tracked cities.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- How It Works -->
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">📚 How Weather Bot Works</h2>
-        </div>
-        <div style="padding: 16px; color: var(--text-secondary); line-height: 1.6;">
-          <p><strong>Edge Thesis:</strong> Polymarket offers daily high temperature markets. The bot compares NWS (National Weather Service) forecasts to market prices.</p>
-          <br>
-          <p><strong>NWS Accuracy:</strong></p>
-          <ul style="margin-left: 20px; margin-top: 8px;">
-            <li>0-24 hours: ±2°F ~80% of the time</li>
-            <li>24-48 hours: ±3°F ~90% of the time</li>
-            <li>48-72 hours: ±5°F ~95% of the time</li>
-          </ul>
-          <br>
-          <p><strong>Example:</strong> If NWS predicts 85°F with high confidence and Polymarket prices the 85-86°F bucket at 60¢, but the true probability is ~75%, that's 15% edge.</p>
-          <br>
-          <p><strong>Tracked Cities:</strong> NYC, LA, Chicago, Miami, Dallas, Seattle</p>
-        </div>
-      </div>
-
-    </div><!-- End Weather Panel -->
-
   </div>
 
   <!-- Toast Container -->
@@ -1983,12 +1623,6 @@
     document.querySelectorAll('.main-tab').forEach(tab => {
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
-    
-    // Weather bot controls
-    document.getElementById('weatherToggle').addEventListener('click', toggleWeatherBot);
-    document.getElementById('weatherScanBtn').addEventListener('click', scanWeather);
-    document.getElementById('weatherSaveConfig').addEventListener('click', saveWeatherConfig);
-    document.getElementById('refreshWeatherOpps').addEventListener('click', fetchWeatherOpportunities);
     
     // Update trading window status every second
     setInterval(updateTradingWindow, 1000);
@@ -2137,7 +1771,7 @@
       const inWindow = minute >= windowStart && minute <= windowEnd;
       
       // Update ALL crypto tabs with the same trading window info
-      const prefixes = ['', 'eth', 'xrp', 'sol']; // '' is for BTC
+      const prefixes = ['', 'eth']; // '' is for BTC
       
       prefixes.forEach(prefix => {
         const minuteId = prefix ? `${prefix}CurrentMinute` : 'currentMinute';
@@ -2303,7 +1937,7 @@
       toggleLabel.textContent = enabled ? 'Bot Enabled' : 'Bot Disabled';
       
       // Sync to all crypto tabs
-      ['eth', 'xrp', 'sol'].forEach(prefix => {
+      ['eth'].forEach(prefix => {
         const toggle = document.getElementById(`${prefix}BotToggle`);
         const label = document.getElementById(`${prefix}ToggleLabel`);
         if (toggle) toggle.className = `toggle ${enabled ? 'active' : ''}`;
@@ -2314,7 +1948,7 @@
     function updateDashboard(data) {
       // Stats - update on ALL crypto tabs
       const pnl = data.status.totalPnL || 0;
-      const cryptos = ['', 'eth', 'xrp', 'sol']; // '' is for BTC (no prefix)
+      const cryptos = ['', 'eth']; // '' is for BTC (no prefix)
       
       cryptos.forEach(prefix => {
         const pnlId = prefix ? `${prefix}TotalPnL` : 'totalPnL';
@@ -2344,7 +1978,7 @@
       maxCostInput.value = data.config.maxCombinedCost;
       
       // Also sync config to other crypto tabs
-      ['eth', 'xrp', 'sol'].forEach(prefix => {
+      ['eth'].forEach(prefix => {
         const betInput = document.getElementById(`${prefix}BetSizeInput`);
         const costInput = document.getElementById(`${prefix}MaxCostInput`);
         if (betInput) betInput.value = data.config.betSize;
@@ -2363,7 +1997,7 @@
       } catch (e) {
         console.error('Error in renderTrades:', e);
       }
-      ['eth', 'xrp', 'sol'].forEach(prefix => {
+      ['eth'].forEach(prefix => {
         try {
           renderTradesForCrypto(data.recentTrades, prefix);
         } catch (e) {
@@ -2504,7 +2138,7 @@
 
     function renderPositions(positions) {
       // Render to all crypto tabs
-      ['positionsContainer', 'ethPositionsContainer', 'xrpPositionsContainer', 'solPositionsContainer'].forEach(containerId => {
+      ['positionsContainer', 'ethPositionsContainer'].forEach(containerId => {
         renderPositionsToContainer(positions, containerId);
       });
     }
@@ -2675,7 +2309,7 @@
     // ============================================
     
     // Supported crypto tabs
-    const CRYPTO_TABS = ['btc', 'eth', 'xrp', 'sol'];
+    const CRYPTO_TABS = ['btc', 'eth'];
     
     function switchTab(tabId) {
       // Update tab buttons
@@ -2689,9 +2323,7 @@
       });
       
       // Fetch data for the active tab
-      if (tabId === 'weather') {
-        fetchWeatherStatus();
-      } else if (CRYPTO_TABS.includes(tabId) && tabId !== 'btc') {
+      if (CRYPTO_TABS.includes(tabId) && tabId !== 'btc') {
         // Fetch markets for the selected crypto
         fetchSingleCryptoMarkets(tabId.toUpperCase());
       }
@@ -2880,204 +2512,6 @@
     }
 
     // ============================================
-    // WEATHER BOT FUNCTIONS
-    // ============================================
-    
-    let weatherEnabled = false;
-
-    async function fetchWeatherStatus() {
-      try {
-        const { data } = await apiCall('/weather/status');
-        updateWeatherStatus(data);
-      } catch (error) {
-        console.error('Failed to fetch weather status:', error);
-      }
-    }
-
-    async function fetchWeatherOpportunities() {
-      try {
-        const { data } = await apiCall('/weather/opportunities');
-        renderWeatherOpportunities(data);
-      } catch (error) {
-        console.error('Failed to fetch weather opportunities:', error);
-      }
-    }
-
-    async function scanWeather() {
-      try {
-        const btn = document.getElementById('weatherScanBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Scanning...';
-        
-        const { data, message } = await apiCall('/weather/scan', 'POST');
-        showToast(message || 'Weather scan complete!', 'success');
-        
-        updateWeatherScanResult(data);
-        renderWeatherOpportunities(data.opportunities || []);
-        renderCityForecasts(data.forecasts || {});
-      } catch (error) {
-        showToast('Weather scan failed: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('weatherScanBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🔍 Scan Now';
-      }
-    }
-
-    async function toggleWeatherBot() {
-      try {
-        const { data } = await apiCall('/weather/toggle', 'POST');
-        weatherEnabled = data.enabled;
-        updateWeatherToggle(data.enabled);
-        showToast(data.enabled ? 'Weather bot enabled' : 'Weather bot disabled', 'success');
-      } catch (error) {
-        showToast('Failed to toggle weather bot', 'error');
-      }
-    }
-
-    async function saveWeatherConfig() {
-      try {
-        await apiCall('/weather/settings', 'POST', {
-          minEdgeForTrade: parseFloat(document.getElementById('weatherMinEdge').value) / 100,
-          maxTradeSize: parseFloat(document.getElementById('weatherMaxTrade').value),
-        });
-        showToast('Weather settings saved', 'success');
-      } catch (error) {
-        showToast('Failed to save settings', 'error');
-      }
-    }
-
-    function updateWeatherStatus(status) {
-      weatherEnabled = status.enabled;
-      updateWeatherToggle(status.enabled);
-      
-      document.getElementById('weatherOpportunities').textContent = status.opportunityCount || 0;
-      document.getElementById('weatherLastScan').textContent = status.lastScanTime 
-        ? formatTime(status.lastScanTime) 
-        : '--';
-      
-      if (status.minEdgeForTrade) {
-        document.getElementById('weatherMinEdge').value = Math.round(status.minEdgeForTrade * 100);
-      }
-      if (status.maxTradeSize) {
-        document.getElementById('weatherMaxTrade').value = status.maxTradeSize;
-      }
-    }
-
-    function updateWeatherToggle(enabled) {
-      const toggle = document.getElementById('weatherToggle');
-      const label = document.getElementById('weatherToggleLabel');
-      toggle.className = `toggle ${enabled ? 'active' : ''}`;
-      label.textContent = enabled ? 'Bot Enabled' : 'Bot Disabled';
-    }
-
-    function updateWeatherScanResult(data) {
-      document.getElementById('weatherMarkets').textContent = data.markets?.length || 0;
-      document.getElementById('weatherOpportunities').textContent = data.opportunities?.length || 0;
-      document.getElementById('weatherLastScan').textContent = data.scannedAt 
-        ? formatTime(data.scannedAt) 
-        : '--';
-      
-      // Update top edge
-      if (data.opportunities && data.opportunities.length > 0) {
-        const topEdge = Math.max(...data.opportunities.map(o => o.edge));
-        document.getElementById('weatherTopEdge').textContent = `${(topEdge * 100).toFixed(1)}%`;
-      } else {
-        document.getElementById('weatherTopEdge').textContent = '--';
-      }
-    }
-
-    function renderWeatherOpportunities(opportunities) {
-      const container = document.getElementById('weatherOpportunitiesContainer');
-      
-      if (!opportunities || opportunities.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">🌤️</div>
-            <p>No opportunities found. Run a scan or check back later.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const html = opportunities.map(opp => `
-        <div class="opportunity-card">
-          <div class="opportunity-header">
-            <div class="opportunity-city">
-              <span style="font-size: 1.2rem; margin-right: 8px;">🌡️</span>
-              ${opp.city} - ${opp.bucket.label}
-            </div>
-            <div class="opportunity-edge">+${(opp.edge * 100).toFixed(1)}%</div>
-          </div>
-          <div class="opportunity-details">
-            <div class="opportunity-detail">
-              <div class="opportunity-detail-label">NWS Forecast</div>
-              <div class="opportunity-detail-value">${opp.nwsForecastHigh}°F</div>
-            </div>
-            <div class="opportunity-detail">
-              <div class="opportunity-detail-label">Market Price</div>
-              <div class="opportunity-detail-value">${(opp.marketPrice * 100).toFixed(1)}¢</div>
-            </div>
-            <div class="opportunity-detail">
-              <div class="opportunity-detail-label">True Prob</div>
-              <div class="opportunity-detail-value">${(opp.estimatedTrueProb * 100).toFixed(1)}%</div>
-            </div>
-          </div>
-          <div class="opportunity-action">
-            <div>
-              <span class="city-confidence ${opp.nwsConfidence}">${opp.nwsConfidence.replace('_', ' ')}</span>
-              <span style="margin-left: 8px; color: var(--text-muted);">${opp.hoursUntil}h until settlement</span>
-            </div>
-            <span class="action-badge ${opp.action === 'BUY_YES' ? 'buy-yes' : 'buy-no'}">${opp.action.replace('_', ' ')}</span>
-          </div>
-        </div>
-      `).join('');
-
-      container.innerHTML = html;
-    }
-
-    function renderCityForecasts(forecasts) {
-      const container = document.getElementById('cityForecastsContainer');
-      
-      if (!forecasts || Object.keys(forecasts).length === 0) {
-        container.innerHTML = `
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <div class="empty-state-icon">🏙️</div>
-            <p>No forecasts available. Run a scan to fetch NWS data.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const html = Object.entries(forecasts).map(([cityCode, forecast]) => `
-        <div class="city-card">
-          <div class="city-header">
-            <div class="city-name">${getCityName(cityCode)}</div>
-            <div class="city-temp">${forecast.highTemp}°F</div>
-          </div>
-          <div class="city-forecast">${forecast.shortForecast}</div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="city-confidence ${forecast.confidence}">${forecast.confidence.replace('_', ' ')}</span>
-            <span style="color: var(--text-muted); font-size: 0.8rem;">${forecast.hoursUntil}h out</span>
-          </div>
-        </div>
-      `).join('');
-
-      container.innerHTML = html;
-    }
-
-    function getCityName(code) {
-      const names = {
-        NYC: 'New York City',
-        LA: 'Los Angeles',
-        Chicago: 'Chicago',
-        Miami: 'Miami',
-        Dallas: 'Dallas',
-        Seattle: 'Seattle'
-      };
-      return names[code] || code;
-    }
-
     // Auto-refresh every 30 seconds
     setInterval(() => {
       if (isConnected) fetchStats();

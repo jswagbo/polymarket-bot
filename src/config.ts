@@ -68,9 +68,9 @@ export function loadConfig(): Config {
   };
 }
 
-// Supported crypto types
-export type CryptoType = 'BTC' | 'ETH' | 'XRP' | 'SOL';
-export const ALL_CRYPTOS: CryptoType[] = ['BTC', 'ETH', 'XRP', 'SOL'];
+// Supported crypto types (BTC and ETH only)
+export type CryptoType = 'BTC' | 'ETH';
+export const ALL_CRYPTOS: CryptoType[] = ['BTC', 'ETH'];
 
 // Per-crypto settings
 export interface CryptoSettings {

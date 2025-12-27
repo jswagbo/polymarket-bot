@@ -47,8 +47,6 @@ const NEG_RISK_ABI = [
 export const SERIES_IDS = {
   BTC_HOURLY: '10114',      // BTC Up or Down Hourly
   ETH_HOURLY: '10117',      // ETH Up or Down Hourly (slug: eth-up-or-down-hourly)
-  XRP_HOURLY: '10123',      // XRP Up or Down Hourly
-  SOL_HOURLY: '10122',      // Solana Up or Down Hourly (slug: solana-up-or-down-hourly)
   TSLA_DAILY: '10375',      // TSLA Daily Up Down
   AMZN_DAILY: '10378',      // AMZN Daily Up Down
   RUSSELL_DAILY: '10388',   // Russell 2000 Daily Up or Down
@@ -56,23 +54,19 @@ export const SERIES_IDS = {
   BRENT_DAILY: '10416',     // Brent Crude Oil Daily Up or Down
 };
 
-// Crypto types supported for hourly markets
-export type CryptoType = 'BTC' | 'ETH' | 'XRP' | 'SOL';
+// Crypto types supported for hourly markets (BTC and ETH only)
+export type CryptoType = 'BTC' | 'ETH';
 
 // Map crypto types to series IDs
 export const CRYPTO_SERIES_MAP: Record<CryptoType, string> = {
   BTC: SERIES_IDS.BTC_HOURLY,
   ETH: SERIES_IDS.ETH_HOURLY,
-  XRP: SERIES_IDS.XRP_HOURLY,
-  SOL: SERIES_IDS.SOL_HOURLY,
 };
 
 // Display names for each crypto
 export const CRYPTO_DISPLAY_NAMES: Record<CryptoType, string> = {
   BTC: 'Bitcoin',
   ETH: 'Ethereum',
-  XRP: 'XRP',
-  SOL: 'Solana',
 };
 
 export interface PolymarketClientConfig {

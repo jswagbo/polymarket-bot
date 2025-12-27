@@ -9,8 +9,8 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Scheduler');
 
-// Supported crypto types for the configurable strategy
-export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH', 'XRP', 'SOL'];
+// Supported crypto types for the configurable strategy (BTC and ETH only)
+export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH'];
 
 export interface LiveMarketData {
   eventId: string;
