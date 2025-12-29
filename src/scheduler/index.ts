@@ -22,7 +22,8 @@ export interface LiveMarketData {
   isViable: boolean;
   viableSide: 'up' | 'down' | null;
   expectedValue: number;
-  threshold: number;  // The price threshold for this crypto
+  threshold: number;     // Min price threshold (90¢)
+  maxThreshold: number;  // Max price threshold (94¢)
 }
 
 export class TradingScheduler {
@@ -276,6 +277,7 @@ export class TradingScheduler {
               viableSide: analysis.viableSide,
               expectedValue: analysis.expectedValue,
               threshold: minPrice,
+              maxThreshold: analysis.maxThreshold,
             };
           });
           this.marketDataByCrypto.set(crypto, marketData);
@@ -388,6 +390,7 @@ export class TradingScheduler {
               viableSide: analysis.viableSide,
               expectedValue: analysis.expectedValue,
               threshold: minPrice,
+              maxThreshold: analysis.maxThreshold,
             };
           });
           this.marketDataByCrypto.set(c, marketData);
