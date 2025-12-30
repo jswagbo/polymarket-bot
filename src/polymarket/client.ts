@@ -1299,77 +1299,17 @@ export class PolymarketClient {
   }
 
   /**
-   * Compute CTF position ID using the Gnosis Conditional Token Framework formula
-   * positionId = uint256(keccak256(abi.encodePacked(collateralToken, collectionId)))
-   * collectionId = keccak256(abi.encodePacked(parentCollectionId, conditionId, indexSet))
-   */
-  computePositionId(collateralToken: string, conditionId: string, indexSet: number): string {
-    const parentCollectionId = ethers.constants.HashZero;
-    
-    // Compute collection ID: keccak256(parentCollectionId, conditionId, indexSet)
-    const collectionId = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32', 'uint256'],
-      [parentCollectionId, conditionId, indexSet]
-    );
-    
-    // Compute position ID: keccak256(collateralToken, collectionId)
-    const positionId = ethers.utils.solidityKeccak256(
-      ['address', 'bytes32'],
-      [collateralToken, collectionId]
-    );
-    
-    return positionId;
-  }
-
-  /**
-   * Check if user has any position balance for a given condition
-   * Returns { hasPosition: boolean, balanceUp: BigNumber, balanceDown: BigNumber }
-   * This is a READ-ONLY call that costs ZERO gas
-   */
-  async checkPositionBalance(
-    conditionId: string, 
-    provider: ethers.providers.JsonRpcProvider,
-    address: string
-  ): Promise<{ hasPosition: boolean; balanceUp: ethers.BigNumber; balanceDown: ethers.BigNumber; checkSucceeded: boolean }> {
-    const ctf = new ethers.Contract(CTF_CONTRACT, CTF_ABI, provider);
-    
-    try {
-      // Compute position IDs using Gnosis CTF formula (off-chain, no RPC call)
-      const posIdUp = this.computePositionId(USDC_E_ADDRESS, conditionId, 1);   // indexSet 1 = Yes/Up
-      const posIdDown = this.computePositionId(USDC_E_ADDRESS, conditionId, 2); // indexSet 2 = No/Down
-      
-      // Get balances (read-only RPC calls, no gas)
-      const balanceUp = await ctf.balanceOf(address, posIdUp);
-      const balanceDown = await ctf.balanceOf(address, posIdDown);
-      
-      const hasPosition = !balanceUp.isZero() || !balanceDown.isZero();
-      
-      logger.debug(`Position check for ${conditionId.slice(0, 10)}...: Up=${ethers.utils.formatUnits(balanceUp, 6)}, Down=${ethers.utils.formatUnits(balanceDown, 6)}`);
-      
-      return { hasPosition, balanceUp, balanceDown, checkSucceeded: true };
-    } catch (error: any) {
-      // If balance check fails, return checkSucceeded=false so caller can decide to proceed
-      logger.warn(`Balance check failed for ${conditionId}: ${error.message}`);
-      return { 
-        hasPosition: true,  // Assume position exists - fail-open to allow redemption attempt
-        balanceUp: ethers.BigNumber.from(0), 
-        balanceDown: ethers.BigNumber.from(0),
-        checkSucceeded: false
-      };
-    }
-  }
-
-  /**
    * Redeem a winning position
-   * Now with PRE-CHECK: Will verify position exists BEFORE sending transaction
-   * This saves gas on failed attempts (brute-force claiming optimization)
+   * Uses dynamic gas pricing from Polygon Gas Station API
    */
   async redeemPosition(conditionId: string, isNegRisk: boolean = false): Promise<string> {
     if (!this.wallet) {
       throw new Error('No wallet configured');
     }
 
-    logger.debug(`Checking position: ${conditionId}`);
+    logger.info(`=== Redeeming Position ===`);
+    logger.info(`Condition ID: ${conditionId}`);
+    logger.info(`Is Neg Risk market: ${isNegRisk}`);
 
     // Connect to provider
     let provider: ethers.providers.JsonRpcProvider | null = null;
@@ -1388,39 +1328,8 @@ export class PolymarketClient {
     const connectedWallet = this.wallet.connect(provider);
     const address = await this.wallet.getAddress();
 
-    // ========== PRE-CHECK OPTIMIZATION ==========
-    // Check if user has any position BEFORE sending transaction
-    // This is a FREE read-only call that saves gas on failed attempts
-    if (!isNegRisk) {
-      const { hasPosition, balanceUp, balanceDown, checkSucceeded } = await this.checkPositionBalance(
-        conditionId, 
-        provider, 
-        address
-      );
-      
-      if (checkSucceeded && !hasPosition) {
-        // Pre-check confirmed no position - skip transaction entirely (saves ~$0.002)
-        throw new Error('No balance to redeem - position already claimed or never held');
-      }
-      
-      // Log the position we're about to redeem
-      logger.info(`=== Redeeming Position ===`);
-      logger.info(`Condition ID: ${conditionId}`);
-      if (checkSucceeded) {
-        logger.info(`Position balances (verified):`);
-        logger.info(`  Up/Yes: ${ethers.utils.formatUnits(balanceUp, 6)} shares`);
-        logger.info(`  Down/No: ${ethers.utils.formatUnits(balanceDown, 6)} shares`);
-      } else {
-        logger.info(`Position balance check failed - proceeding with redemption attempt`);
-      }
-    } else {
-      logger.info(`=== Redeeming Neg Risk Position ===`);
-      logger.info(`Condition ID: ${conditionId}`);
-      // Neg Risk positions have different structure - skip pre-check for now
-    }
-
     try {
-      // Get optimal gas price from Polygon Gas Station API (saves ~20-40% vs fixed buffers)
+      // Get optimal gas price from Polygon Gas Station API
       const optimalGasPrice = await getOptimalGasPrice(provider, 'standard');
       logger.info(`⛽ Gas price: ${ethers.utils.formatUnits(optimalGasPrice, 'gwei')} gwei (via Gas Station API)`);
       
@@ -1438,11 +1347,14 @@ export class PolymarketClient {
         const ctf = new ethers.Contract(CTF_CONTRACT, CTF_ABI, connectedWallet);
         const parentCollectionId = ethers.constants.HashZero;
         
+        logger.info(`Redeeming with USDC.e collateral: ${USDC_E_ADDRESS}`);
+        logger.info(`User address: ${address}`);
+        
         tx = await ctf.redeemPositions(
           USDC_E_ADDRESS,
           parentCollectionId,
           conditionId,
-          [1, 2], // Both outcome indices
+          [1, 2], // Both outcome indices - will redeem whatever balance exists
           { gasLimit: 400000, gasPrice: optimalGasPrice }
         );
       }
