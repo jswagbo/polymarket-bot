@@ -53,7 +53,7 @@ export class TradingScheduler {
   private stopLossEnabled = false;
   private stopLossThreshold = 0.70; // 70 cents default
   private stopLossInterval: NodeJS.Timeout | null = null;
-  private stopLossCheckIntervalMs = 30000; // Check every 30 seconds
+  private stopLossCheckIntervalMs = 1000; // Check every 1 second
   private isStopLossRunning = false;
   
   // Trading window: only trade in last 15 minutes of hour (minutes 45-59)
@@ -149,7 +149,7 @@ export class TradingScheduler {
       clearInterval(this.stopLossInterval);
     }
     
-    logger.info(`🛑 Starting stop-loss monitor (checking every ${this.stopLossCheckIntervalMs / 1000}s)`);
+    logger.info(`🛑 Starting stop-loss monitor (checking every 1 second)`);
     
     // Run immediately once
     this.checkStopLoss();
