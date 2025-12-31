@@ -7,7 +7,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:init": "tsx src/db/init.ts"
+    "db:init": "tsx src/db/init.ts",
+    "backtest": "tsx src/backtesting/index.ts",
+    "backtest:optimize": "tsx src/backtesting/index.ts optimize"
   },
   "dependencies": {
     "@polymarket/clob-client": "^4.3.0",

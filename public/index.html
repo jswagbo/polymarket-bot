@@ -4,29 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>Polymarket 90¢ Strategy Bot</title>
+  <title>Polymarket</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=SF+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: 'SF Pro Display';
+      src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Display');
+    }
+    
     :root {
-      --bg-primary: #0a0a0f;
-      --bg-secondary: #12121a;
-      --bg-card: #16161f;
-      --bg-hover: #1e1e2a;
-      --border: #2a2a3a;
-      --text-primary: #f0f0f5;
-      --text-secondary: #8888a0;
-      --text-muted: #555566;
-      --accent-primary: #00d4aa;
-      --accent-secondary: #00a888;
-      --accent-glow: rgba(0, 212, 170, 0.15);
-      --danger: #ff4466;
-      --danger-glow: rgba(255, 68, 102, 0.15);
-      --warning: #ffaa00;
-      --success: #00dd88;
+      --white: #ffffff;
+      --bg: #f5f5f7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --border: #d2d2d7;
+      --blue: #0071e3;
+      --green: #34c759;
+      --red: #ff3b30;
+      --orange: #ff9500;
     }
 
     * {
@@ -36,19 +33,18 @@
     }
 
     body {
-      font-family: 'Outfit', -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
-      background-image: 
-        radial-gradient(ellipse at 20% 0%, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 100%, rgba(0, 168, 136, 0.05) 0%, transparent 50%);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     .container {
-      max-width: 1400px;
+      max-width: 980px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 40px 22px;
     }
 
     /* Header */
@@ -56,227 +52,297 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
     }
 
     .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 4px 20px var(--accent-glow);
-    }
-
-    .logo-text h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: 21px;
+      font-weight: 600;
       letter-spacing: -0.02em;
     }
 
-    .logo-text span {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    /* Auth Form */
-    .auth-section {
+    .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 20px;
     }
 
-    .auth-input {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
+    .password-field {
+      padding: 8px 12px;
+      border: none;
       border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875rem;
-      width: 200px;
-      transition: border-color 0.2s;
+      font-size: 14px;
+      background: var(--white);
+      width: 140px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 13px;
     }
 
-    .auth-input:focus {
-      outline: none;
-      border-color: var(--accent-primary);
+    .password-field:focus {
+      outline: 2px solid var(--blue);
+      outline-offset: 1px;
     }
 
-    .auth-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    /* Status Badge */
-    .status-badge {
-      display: inline-flex;
+    .status {
+      display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.875rem;
+      font-size: 13px;
       font-weight: 500;
-    }
-
-    .status-badge.active {
-      background: rgba(0, 221, 136, 0.1);
-      color: var(--success);
-      border: 1px solid rgba(0, 221, 136, 0.3);
-    }
-
-    .status-badge.inactive {
-      background: rgba(255, 68, 102, 0.1);
-      color: var(--danger);
-      border: 1px solid rgba(255, 68, 102, 0.3);
-    }
-
-    .status-badge.warning {
-      background: rgba(255, 170, 0, 0.1);
-      color: var(--warning);
-      border: 1px solid rgba(255, 170, 0, 0.3);
-    }
-
-    .status-badge.trading {
-      background: rgba(0, 212, 170, 0.1);
-      color: var(--accent-primary);
-      border: 1px solid rgba(0, 212, 170, 0.3);
+      color: var(--text-secondary);
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: currentColor;
-      animation: pulse 2s infinite;
+      background: var(--red);
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .status.connected .status-dot {
+      background: var(--green);
     }
 
-    /* Grid Layout */
-    .grid {
-      display: grid;
-      gap: 24px;
+    /* Navigation */
+    .nav {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 48px;
     }
 
-    .grid-2 {
-      grid-template-columns: repeat(2, 1fr);
+    .nav-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 8px 0;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
     }
 
-    .grid-4 {
-      grid-template-columns: repeat(4, 1fr);
+    .nav-link:hover {
+      color: var(--text);
     }
 
-    @media (max-width: 1024px) {
-      .grid-4 { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 640px) {
-      .grid-2, .grid-4 { grid-template-columns: 1fr; }
+    .nav-link.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
     }
 
     /* Cards */
     .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .card-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    /* Stat Cards */
-    .stat-card {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stat-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 4px;
-    }
-
-    .stat-value.positive { color: var(--success); }
-    .stat-value.negative { color: var(--danger); }
-
-    .stat-label {
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-    }
-
-    .stat-icon {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      font-size: 2rem;
-      opacity: 0.1;
-    }
-
-    /* Control Panel */
-    .control-panel {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
+      background: var(--white);
+      border-radius: 18px;
+      padding: 28px;
       margin-bottom: 24px;
     }
 
-    .control-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .card-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 24px;
     }
 
-    .control-label {
-      font-size: 0.75rem;
+    .card-subtitle {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat {
+      background: var(--white);
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 34px;
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.positive { color: var(--green); }
+    .stat-value.negative { color: var(--red); }
+
+    .stat-label {
+      font-size: 12px;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.02em;
     }
 
-    .control-input {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    /* Window Status */
+    .window-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      background: var(--white);
+      border-radius: 14px;
+      margin-bottom: 24px;
+    }
+
+    .window-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .window-icon {
+      font-size: 32px;
+    }
+
+    .window-text strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .window-text span {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .window-time {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .minute-display {
+      font-size: 40px;
+      font-weight: 600;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.02em;
+    }
+
+    .window-pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .window-pill.active {
+      background: rgba(52, 199, 89, 0.15);
+      color: #248a3d;
+    }
+
+    .window-pill.waiting {
+      background: rgba(255, 149, 0, 0.15);
+      color: #c93400;
+    }
+
+    /* Form Controls */
+    .form-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .form-row:last-of-type {
+      border-bottom: none;
+    }
+
+    .form-label {
+      font-size: 17px;
+      font-weight: 400;
+    }
+
+    .form-sublabel {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .toggle {
+      width: 51px;
+      height: 31px;
+      background: #e9e9eb;
+      border-radius: 31px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+
+    .toggle.on {
+      background: var(--green);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 27px;
+      height: 27px;
+      background: var(--white);
+      border-radius: 50%;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.16);
+      transition: transform 0.25s;
+    }
+
+    .toggle.on::after {
+      transform: translateX(20px);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .field-input {
       padding: 12px 16px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1rem;
-      width: 140px;
-      transition: all 0.2s;
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 17px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      background: var(--white);
     }
 
-    .control-input:focus {
+    .field-input:focus {
       outline: none;
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
     }
 
     /* Buttons */
@@ -284,240 +350,77 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
+      padding: 12px 22px;
+      border-radius: 980px;
+      font-size: 17px;
+      font-weight: 400;
       cursor: pointer;
-      transition: all 0.2s;
       border: none;
+      transition: all 0.15s;
       font-family: inherit;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: var(--bg-primary);
-      box-shadow: 0 4px 15px var(--accent-glow);
+      background: var(--blue);
+      color: var(--white);
     }
 
     .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px var(--accent-glow);
+      background: #0077ed;
     }
 
     .btn-secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--blue);
     }
 
     .btn-secondary:hover {
-      background: var(--bg-hover);
-      border-color: var(--text-muted);
+      background: rgba(0, 113, 227, 0.08);
     }
 
     .btn-danger {
-      background: linear-gradient(135deg, var(--danger), #cc3355);
-      color: white;
-      box-shadow: 0 4px 15px var(--danger-glow);
+      background: transparent;
+      color: var(--red);
     }
 
     .btn-danger:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px var(--danger-glow);
+      background: rgba(255, 59, 48, 0.08);
     }
 
     .btn:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
-      transform: none !important;
     }
 
-    /* Toggle Switch */
-    .toggle-container {
+    .btn-row {
       display: flex;
-      align-items: center;
       gap: 12px;
+      margin-top: 20px;
     }
 
-    .toggle {
-      position: relative;
-      width: 60px;
-      height: 32px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .toggle.active {
-      background: var(--accent-primary);
-      border-color: var(--accent-primary);
-    }
-
-    .toggle::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 24px;
-      height: 24px;
-      background: white;
-      border-radius: 50%;
-      transition: all 0.3s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-
-    .toggle.active::after {
-      left: calc(100% - 27px);
-    }
-
-    .toggle-label {
-      font-weight: 500;
-    }
-
-    /* Trades Table */
-    .trades-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .trades-table th,
-    .trades-table td {
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .trades-table th {
-      color: var(--text-secondary);
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .trades-table td {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.875rem;
-    }
-
-    .trades-table tr:hover td {
-      background: var(--bg-hover);
-    }
-
-    .trade-market {
-      font-family: 'Outfit', sans-serif;
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .trade-status {
-      display: inline-flex;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .trade-status.open { background: rgba(0, 212, 170, 0.1); color: var(--accent-primary); }
-    .trade-status.pending { background: rgba(255, 170, 0, 0.1); color: var(--warning); }
-    .trade-status.resolved { background: rgba(0, 221, 136, 0.1); color: var(--success); }
-    .trade-status.failed { background: rgba(255, 68, 102, 0.1); color: var(--danger); }
-
-    /* Loading Spinner */
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent-primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Toast Notifications */
-    .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 1000;
-    }
-
-    .toast {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideIn 0.3s ease;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
-
-    .toast.success { border-left: 3px solid var(--success); }
-    .toast.error { border-left: 3px solid var(--danger); }
-
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 48px 24px;
-      color: var(--text-secondary);
-    }
-
-    .empty-state-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      opacity: 0.3;
-    }
-
-    /* Live Markets Grid */
+    /* Markets Grid */
     .markets-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
     }
 
     .market-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      transition: all 0.2s;
-    }
-
-    .market-card:hover {
-      border-color: var(--accent-primary);
-      transform: translateY(-2px);
+      background: var(--bg);
+      border-radius: 14px;
+      padding: 20px;
     }
 
     .market-card.viable {
-      border-color: var(--success);
-      background: rgba(0, 221, 136, 0.05);
+      background: rgba(52, 199, 89, 0.08);
+      outline: 2px solid var(--green);
+      outline-offset: -2px;
     }
 
     .market-title {
-      font-size: 0.9rem;
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--text-primary);
+      margin-bottom: 16px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -525,742 +428,246 @@
 
     .market-prices {
       display: flex;
-      justify-content: space-between;
       gap: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .price-box {
       flex: 1;
-      background: var(--bg-card);
-      border-radius: 8px;
-      padding: 10px;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 14px;
       text-align: center;
     }
 
     .price-label {
-      font-size: 0.7rem;
+      font-size: 11px;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
     }
 
     .price-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.1rem;
+      font-size: 22px;
       font-weight: 600;
+      font-feature-settings: 'tnum';
     }
 
-    .price-value.up { color: var(--success); }
-    .price-value.down { color: var(--danger); }
+    .price-value.up { color: var(--green); }
+    .price-value.down { color: var(--red); }
 
-    .market-meta {
+    .market-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.8rem;
+      font-size: 13px;
       color: var(--text-secondary);
     }
 
-    .market-combined {
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .market-time {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .viable-badge {
+    .viable-tag {
       display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.7rem;
+      padding: 5px 12px;
+      background: var(--green);
+      color: var(--white);
+      font-size: 12px;
       font-weight: 600;
-      text-transform: uppercase;
-      background: rgba(0, 221, 136, 0.1);
-      color: var(--success);
+      border-radius: 6px;
     }
 
-    .not-viable-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.7rem;
+    /* Table */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
-      background: rgba(136, 136, 160, 0.1);
       color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 0.5px solid var(--border);
     }
 
-    /* Positions */
-    .positions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-    }
-
-    .position-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+    .table td {
       padding: 16px;
-      transition: all 0.2s;
+      font-size: 15px;
+      border-bottom: 0.5px solid var(--border);
     }
 
-    .position-card.claimable {
-      border-color: var(--success);
-      background: rgba(0, 221, 136, 0.08);
+    .table tr:last-child td {
+      border-bottom: none;
     }
 
-    .position-card.pending {
-      border-color: var(--warning);
+    .table tr:hover td {
+      background: var(--bg);
     }
 
-    .position-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-
-    .position-market {
-      font-size: 0.85rem;
-      font-weight: 600;
+    .trade-market {
       max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .position-outcome {
-      display: inline-flex;
+    .trade-side {
+      font-weight: 600;
+    }
+
+    .trade-side.up { color: var(--green); }
+    .trade-side.down { color: var(--red); }
+
+    .trade-status {
+      display: inline-block;
       padding: 4px 10px;
       border-radius: 6px;
-      font-size: 0.75rem;
+      font-size: 12px;
       font-weight: 600;
-      text-transform: uppercase;
     }
 
-    .position-outcome.up {
-      background: rgba(0, 221, 136, 0.1);
-      color: var(--success);
-    }
+    .trade-status.open { background: rgba(0, 113, 227, 0.12); color: var(--blue); }
+    .trade-status.resolved { background: rgba(52, 199, 89, 0.12); color: var(--green); }
+    .trade-status.failed { background: rgba(255, 59, 48, 0.12); color: var(--red); }
 
-    .position-outcome.down {
-      background: rgba(255, 68, 102, 0.1);
-      color: var(--danger);
-    }
-
-    .position-details {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .position-detail {
-      font-size: 0.8rem;
-    }
-
-    .position-detail-label {
+    /* Empty State */
+    .empty {
+      text-align: center;
+      padding: 60px 24px;
       color: var(--text-secondary);
-      margin-bottom: 2px;
     }
 
-    .position-detail-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-    }
-
-    .claimable-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      background: var(--success);
-      color: var(--bg-primary);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .claimable-badge:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 221, 136, 0.3);
-    }
-
-    .position-status {
-      font-size: 0.75rem;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .position-status.open {
-      background: rgba(0, 212, 170, 0.1);
-      color: var(--accent-primary);
-    }
-
-    .position-status.resolved {
-      background: rgba(0, 221, 136, 0.1);
-      color: var(--success);
-    }
-
-    .position-status.lost {
-      background: rgba(255, 68, 102, 0.1);
-      color: var(--danger);
-    }
-
-    .positions-summary {
-      display: flex;
-      gap: 24px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: 10px;
+    .empty-icon {
+      font-size: 48px;
       margin-bottom: 16px;
+      opacity: 0.5;
     }
 
-    .summary-item {
-      text-align: center;
+    .empty p {
+      font-size: 15px;
     }
 
-    .summary-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .summary-value.claimable {
-      color: var(--success);
-    }
-
-    .summary-label {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-    }
-
-    /* Analytics Dashboard */
-    .analytics-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    @media (max-width: 1200px) {
-      .analytics-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 600px) {
-      .analytics-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .analytics-stat {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: center;
-      border: 1px solid var(--border);
-    }
-
-    .analytics-stat-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .analytics-stat-value.positive {
-      color: var(--success);
-    }
-
-    .analytics-stat-value.negative {
-      color: var(--danger);
-    }
-
-    .analytics-stat-value.neutral {
-      color: var(--accent-primary);
-    }
-
-    .analytics-stat-label {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* Charts */
-    .chart-container {
-      background: var(--bg-secondary);
-      border-radius: 12px;
+    /* Claim Section */
+    .claim-box {
+      background: var(--bg);
+      border-radius: 14px;
       padding: 20px;
       margin-bottom: 16px;
-      border: 1px solid var(--border);
     }
 
-    .chart-title {
-      font-size: 0.875rem;
+    .claim-title {
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 16px;
-      color: var(--text-primary);
+      margin-bottom: 14px;
     }
 
-    /* P&L Bar Chart */
-    .pnl-chart {
+    .claim-row {
       display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      height: 120px;
-      gap: 4px;
-      padding-top: 20px;
-      position: relative;
-    }
-
-    .pnl-chart::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      height: 1px;
-      background: var(--border);
-      z-index: 0;
-    }
-
-    .pnl-bar-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100%;
-      justify-content: center;
-      position: relative;
-    }
-
-    .pnl-bar {
-      width: 100%;
-      max-width: 24px;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-      position: relative;
-      z-index: 1;
-    }
-
-    .pnl-bar.positive {
-      background: linear-gradient(to top, var(--success), #00ff99);
-      align-self: flex-end;
-    }
-
-    .pnl-bar.negative {
-      background: linear-gradient(to bottom, var(--danger), #ff6688);
-      align-self: flex-start;
-    }
-
-    .pnl-bar:hover {
-      opacity: 0.8;
-      transform: scaleX(1.1);
-    }
-
-    .pnl-label {
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-      white-space: nowrap;
-    }
-
-    /* Win Rate Ring */
-    .win-rate-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 32px;
-    }
-
-    .win-rate-ring {
-      position: relative;
-      width: 120px;
-      height: 120px;
-    }
-
-    .win-rate-ring svg {
-      transform: rotate(-90deg);
-    }
-
-    .win-rate-ring circle {
-      fill: none;
-      stroke-width: 10;
-    }
-
-    .win-rate-ring .bg {
-      stroke: var(--bg-hover);
-    }
-
-    .win-rate-ring .progress {
-      stroke: var(--success);
-      stroke-linecap: round;
-      transition: stroke-dashoffset 1s ease;
-    }
-
-    .win-rate-text {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-    }
-
-    .win-rate-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--success);
-    }
-
-    .win-rate-label {
-      font-size: 0.65rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-    }
-
-    .win-loss-stats {
-      display: flex;
-      flex-direction: column;
       gap: 12px;
-    }
-
-    .win-loss-stat {
-      display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
     }
 
-    .win-loss-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+    .claim-select,
+    .claim-input {
+      padding: 10px 14px;
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      background: var(--white);
     }
 
-    .win-loss-dot.win {
-      background: var(--success);
-    }
-
-    .win-loss-dot.loss {
-      background: var(--danger);
-    }
-
-    .win-loss-count {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      min-width: 32px;
-    }
-
-    .win-loss-label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-    }
-
-    /* Side Performance */
-    .side-performance {
-      display: flex;
-      gap: 16px;
-    }
-
-    .side-stat {
+    .claim-input {
       flex: 1;
-      background: var(--bg-card);
-      border-radius: 8px;
-      padding: 12px;
-      text-align: center;
+      min-width: 200px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 13px;
     }
 
-    .side-stat.up {
-      border-left: 3px solid var(--success);
-    }
-
-    .side-stat.down {
-      border-left: 3px solid var(--danger);
-    }
-
-    .side-stat-title {
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .side-stat-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-
-    .side-stat-detail {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    /* Hour Heatmap */
-    .hour-grid {
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 4px;
-    }
-
-    .hour-cell {
-      aspect-ratio: 1;
-      border-radius: 4px;
+    .claim-checkbox {
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 0.65rem;
-      font-family: 'JetBrains Mono', monospace;
+      gap: 6px;
+      font-size: 14px;
       color: var(--text-secondary);
-      transition: all 0.2s;
     }
 
-    .hour-cell:hover {
-      transform: scale(1.1);
-    }
-
-    .hour-cell.intensity-0 { background: var(--bg-hover); }
-    .hour-cell.intensity-1 { background: rgba(0, 221, 136, 0.2); color: var(--text-primary); }
-    .hour-cell.intensity-2 { background: rgba(0, 221, 136, 0.4); color: var(--text-primary); }
-    .hour-cell.intensity-3 { background: rgba(0, 221, 136, 0.6); color: var(--bg-primary); }
-    .hour-cell.intensity-4 { background: rgba(0, 221, 136, 0.8); color: var(--bg-primary); }
-    .hour-cell.intensity-5 { background: var(--success); color: var(--bg-primary); }
-
-    .analytics-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .analytics-row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .tab-container {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
-      padding: 8px 16px;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.2s;
-    }
-
-    .tab-btn:hover {
-      background: var(--bg-hover);
-      color: var(--text-primary);
-    }
-
-    .tab-btn.active {
-      background: var(--accent-glow);
-      color: var(--accent-primary);
-      font-weight: 600;
-    }
-
-    /* Main Tab Navigation */
-    .main-tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 24px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 4px;
-    }
-
-    .main-tab {
-      flex: 1;
-      padding: 14px 24px;
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 8px;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .main-tab:hover {
-      color: var(--text-primary);
-      background: var(--bg-hover);
-    }
-
-    .main-tab.active {
-      background: var(--accent-primary);
-      color: var(--bg-primary);
-    }
-
-    .main-tab .tab-icon {
-      font-size: 1.2rem;
-    }
-
-    .tab-panel {
+    /* Tab Panels */
+    .panel {
       display: none;
     }
 
-    .tab-panel.active {
+    .panel.active {
       display: block;
     }
 
-    /* Weather-specific styles */
-    .weather-city-grid {
+    /* Toast */
+    .toast-area {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+
+    .toast {
+      background: var(--text);
+      color: var(--white);
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.3s ease;
+    }
+
+    .toast.error {
+      background: var(--red);
+    }
+
+    @keyframes toastIn {
+      from { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Mono */
+    .mono {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-feature-settings: 'tnum';
+    }
+
+    /* Settings */
+    .settings-section {
+      margin-bottom: 32px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .volatility-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: 16px;
+      margin-top: 20px;
     }
 
-    .city-card {
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      padding: 16px;
-      border: 1px solid var(--border);
-    }
-
-    .city-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .city-name {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .city-temp {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent-primary);
-    }
-
-    .city-forecast {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .city-confidence {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .city-confidence.very_high { background: rgba(0, 221, 136, 0.2); color: var(--success); }
-    .city-confidence.high { background: rgba(0, 212, 170, 0.2); color: var(--accent-primary); }
-    .city-confidence.medium { background: rgba(255, 170, 0, 0.2); color: var(--warning); }
-    .city-confidence.low { background: rgba(255, 68, 102, 0.2); color: var(--danger); }
-
-    .opportunity-card {
-      background: var(--bg-card);
-      border-radius: 12px;
-      padding: 16px;
-      border: 2px solid var(--success);
-      margin-bottom: 12px;
-    }
-
-    .opportunity-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .opportunity-city {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .opportunity-edge {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--success);
-    }
-
-    .opportunity-details {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .opportunity-detail {
-      text-align: center;
-    }
-
-    .opportunity-detail-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-
-    .opportunity-detail-value {
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-    }
-
-    .opportunity-action {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .action-badge {
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
-
-    .action-badge.buy-yes {
-      background: rgba(0, 221, 136, 0.2);
-      color: var(--success);
-    }
-
-    .action-badge.buy-no {
-      background: rgba(255, 68, 102, 0.2);
-      color: var(--danger);
+    @media (max-width: 640px) {
+      .volatility-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1268,1407 +675,595 @@
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <div class="logo">
-        <div class="logo-icon">📊</div>
-        <div class="logo-text">
-          <h1>Polymarket Bot</h1>
-          <span>Automated Trading</span>
-        </div>
-      </div>
-      <div class="auth-section">
-        <input type="password" id="passwordInput" class="auth-input" placeholder="Enter password...">
-        <div id="tradingMode" class="status-badge inactive" style="margin-right: 8px;">
-          <span>--</span>
-        </div>
-        <div id="botStatus" class="status-badge inactive">
+      <div class="logo">Polymarket</div>
+      <div class="header-actions">
+        <input type="password" id="passwordInput" class="password-field" placeholder="Password">
+        <div id="botStatus" class="status">
           <span class="status-dot"></span>
           <span>Disconnected</span>
         </div>
       </div>
     </header>
 
-    <!-- Main Tab Navigation -->
-    <div class="main-tabs">
-      <button class="main-tab active" data-tab="btc">
-        <span class="tab-icon">₿</span>
-        <span>BTC</span>
-      </button>
-      <button class="main-tab" data-tab="eth">
-        <span class="tab-icon">Ξ</span>
-        <span>ETH</span>
-      </button>
-    </div>
+    <!-- Navigation -->
+    <nav class="nav">
+      <button class="nav-link active" data-tab="btc">Bitcoin</button>
+      <button class="nav-link" data-tab="eth">Ethereum</button>
+      <button class="nav-link" data-tab="settings">Settings</button>
+    </nav>
 
-    <!-- BTC Bot Tab Panel -->
-    <div id="btc-panel" class="tab-panel active">
+    <!-- BTC Panel -->
+    <div id="btc-panel" class="panel active">
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="totalPnL">$0</div>
+          <div class="stat-label">Total P&L</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="totalTrades">0</div>
+          <div class="stat-label">Trades</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="activePositions">0</div>
+          <div class="stat-label">Positions</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="lastScan">—</div>
+          <div class="stat-label">Last Scan</div>
+        </div>
+      </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-4" style="margin-bottom: 24px;">
-      <div class="card stat-card">
-        <span class="stat-icon">📈</span>
-        <div class="stat-value" id="totalPnL">$0.00</div>
-        <div class="stat-label">Total P&L</div>
+      <!-- Trading Window -->
+      <div class="window-status">
+        <div class="window-info">
+          <span class="window-icon" id="windowIcon">⏰</span>
+          <div class="window-text">
+            <strong id="windowStatus">Window Closed</strong>
+            <span id="windowDetails">Opens at minute 45</span>
+          </div>
+        </div>
+        <div class="window-time">
+          <span class="minute-display" id="currentMinute">00</span>
+          <span id="windowPill" class="window-pill waiting">Waiting</span>
+        </div>
       </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🎯</span>
-        <div class="stat-value" id="totalTrades">0</div>
-        <div class="stat-label">Total Trades</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏳</span>
-        <div class="stat-value" id="activePositions">0</div>
-        <div class="stat-label">Active Positions</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏱️</span>
-        <div class="stat-value" id="lastScan">--</div>
-        <div class="stat-label">Last Scan</div>
-      </div>
-    </div>
 
-    <!-- Trading Window Indicator -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 1.5rem;" id="windowIcon">⏰</span>
+      <!-- BTC Controls -->
+      <div class="card">
+        <h2 class="card-title">Bitcoin</h2>
+        <div class="form-row">
           <div>
-            <div style="font-weight: 600; font-size: 1rem;" id="windowStatus">Trading Window</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="windowDetails">Minutes 45-59 of each hour</div>
+            <div class="form-label">Enable Trading</div>
+            <div class="form-sublabel">Auto-buy when price reaches threshold</div>
+          </div>
+          <div id="btcToggle" class="toggle" onclick="toggleCrypto('BTC')"></div>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Bet Size</label>
+            <input type="number" id="btcBetSizeInput" class="field-input" value="90" min="1">
+          </div>
+          <div class="field">
+            <label class="field-label">Min Price (¢)</label>
+            <input type="number" id="btcMinPriceInput" class="field-input" value="90" min="50" max="99">
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="text-align: center;">
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700;" id="currentMinute">--</div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">Current Minute</div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="saveCryptoConfig('BTC')">Save</button>
+          <button class="btn btn-primary" onclick="forceScanCrypto('BTC')">Scan Markets</button>
+        </div>
+      </div>
+
+      <!-- Live Markets -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 class="card-title" style="margin-bottom: 0;">Markets</h2>
+          <button class="btn btn-secondary" id="refreshMarketsBtn">Refresh</button>
+        </div>
+        <div id="liveMarketsContainer">
+          <div class="empty">
+            <div class="empty-icon">📊</div>
+            <p>No markets. Click Scan Markets to fetch.</p>
           </div>
-          <div id="windowBadge" class="status-badge inactive" style="font-size: 0.9rem; padding: 10px 20px;">
-            <span>WAITING</span>
+        </div>
+      </div>
+
+      <!-- Claim -->
+      <div class="card">
+        <h2 class="card-title">Claim Winnings</h2>
+        <div class="claim-box">
+          <div class="claim-title">Bulk Claim</div>
+          <div class="claim-row">
+            <select id="claimDaysBack" class="claim-select">
+              <option value="3">Last 3 days</option>
+              <option value="7" selected>Last 7 days</option>
+              <option value="14">Last 14 days</option>
+            </select>
+            <button class="btn btn-primary" id="bulkClaimBtn">Claim All</button>
+          </div>
+        </div>
+        <div class="claim-box">
+          <div class="claim-title">Manual Claim</div>
+          <div class="claim-row">
+            <input type="text" id="manualConditionId" class="claim-input" placeholder="Condition ID (0x...)">
+            <label class="claim-checkbox">
+              <input type="checkbox" id="negRiskCheckbox"> Neg Risk
+            </label>
+            <button class="btn btn-secondary" id="manualClaimBtn">Claim</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trades -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 class="card-title" style="margin-bottom: 0;">Trades</h2>
+          <div class="btn-row" style="margin-top: 0;">
+            <button class="btn btn-secondary" id="refreshTradesBtn">Refresh</button>
+            <button class="btn btn-secondary" id="exportCsvBtn">Export</button>
+          </div>
+        </div>
+        <div id="tradesContainer">
+          <div class="empty">
+            <div class="empty-icon">📭</div>
+            <p>No trades yet.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Control Panel -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">₿ BTC Bot Controls</h2>
-      </div>
-      <div class="control-panel">
-        <div class="toggle-container">
-          <div id="btcBotToggle" class="toggle" onclick="toggleCrypto('BTC')"></div>
-          <span class="toggle-label" id="btcToggleLabel">BTC Disabled</span>
+    <!-- ETH Panel -->
+    <div id="eth-panel" class="panel">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="ethTotalPnL">$0</div>
+          <div class="stat-label">Total P&L</div>
         </div>
-        <div class="control-group">
-          <label class="control-label">Bet Size ($)</label>
-          <input type="number" id="btcBetSizeInput" class="control-input" min="1" step="1" value="90">
+        <div class="stat">
+          <div class="stat-value" id="ethTotalTrades">0</div>
+          <div class="stat-label">Trades</div>
         </div>
-        <div class="control-group">
-          <label class="control-label">Min Price (¢)</label>
-          <input type="number" id="btcMinPriceInput" class="control-input" min="50" max="99" step="1" value="90">
+        <div class="stat">
+          <div class="stat-value" id="ethActivePositions">0</div>
+          <div class="stat-label">Positions</div>
         </div>
-        <button class="btn btn-secondary" onclick="saveCryptoConfig('BTC')">💾 Save BTC</button>
-        <button class="btn btn-primary" onclick="forceScanCrypto('BTC')">🔍 Scan BTC</button>
-      </div>
-    </div>
-    
-    <!-- Global Controls -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">🌐 Global Controls</h2>
-      </div>
-      <div class="control-panel">
-        <div class="toggle-container">
-          <div id="botToggle" class="toggle" onclick="toggleBot()"></div>
-          <span class="toggle-label" id="toggleLabel">Global Bot Disabled</span>
+        <div class="stat">
+          <div class="stat-value" id="ethLastScan">—</div>
+          <div class="stat-label">Last Scan</div>
         </div>
-        <button class="btn btn-secondary" id="approveBtn">✅ Approve USDC</button>
-        <button class="btn btn-secondary" id="approveSellBtn">🔓 Approve Selling</button>
-        <button class="btn btn-secondary" id="resetBtn">🔄 Reset History</button>
-        <button class="btn btn-danger" id="emergencyStopBtn">⛔ Emergency Stop</button>
       </div>
-    </div>
 
-    <!-- Live Markets -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">📡 Live Markets</h2>
-        <button class="btn btn-secondary" id="refreshMarketsBtn">🔄 Refresh</button>
-      </div>
-      <div id="liveMarketsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">📊</div>
-          <p>No market data yet. Click "Force Scan" to fetch live markets.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Positions & Winnings -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">💰 Positions & Winnings</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" id="refreshPositionsBtn">🔄 Refresh</button>
-          <button class="btn btn-secondary" id="checkClaimableBtn">🔍 Check Claimable</button>
-          <button class="btn btn-primary" id="claimAllBtn">💵 Claim All Winnings</button>
-          <button class="btn btn-secondary" id="approveSellBtn">🔓 Approve Selling</button>
-          <button class="btn btn-danger" id="cashOutBtn">💸 Cash Out All</button>
-        </div>
-      </div>
-      
-      <!-- Bulk Claim Section -->
-      <div style="padding: 16px; background: linear-gradient(135deg, rgba(0, 212, 170, 0.1), rgba(0, 168, 136, 0.05)); border: 1px solid var(--accent-primary); border-radius: 8px; margin-bottom: 16px;">
-        <h3 style="font-size: 0.95rem; color: var(--accent-primary); margin-bottom: 12px;">🚀 Bulk Claim All Hourly Crypto Positions</h3>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-          <select id="claimDaysBack" class="auth-input" style="width: 120px;">
-            <option value="3">Last 3 days</option>
-            <option value="7" selected>Last 7 days</option>
-            <option value="14">Last 14 days</option>
-            <option value="30">Last 30 days</option>
-          </select>
-          <button class="btn btn-primary" id="bulkClaimBtn" style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));">
-            🎯 Claim ALL Resolved Markets
-          </button>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px;">
-          ⚡ This will attempt to claim <strong>every</strong> resolved BTC & ETH hourly market. Markets where you don't have a position will be skipped automatically.
-        </p>
-      </div>
-      
-      <!-- Manual Claim Section -->
-      <div style="padding: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;">
-        <h3 style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 12px;">🔧 Manual Claim (single position)</h3>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-          <input type="text" id="manualConditionId" class="auth-input" style="flex: 1; min-width: 300px;" placeholder="Enter Condition ID (0x...)">
-          <label style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 0.85rem;">
-            <input type="checkbox" id="negRiskCheckbox" style="width: 16px; height: 16px;">
-            Neg Risk
-          </label>
-          <button class="btn btn-secondary" id="manualClaimBtn">💵 Claim This</button>
-        </div>
-      </div>
-      
-      <div id="claimableInfo" style="display: none; padding: 12px 16px; background: var(--accent-glow); border: 1px solid var(--accent-primary); border-radius: 8px; margin-bottom: 16px;">
-        <span id="claimableCount" style="color: var(--accent-primary); font-weight: 600;"></span>
-      </div>
-      <div id="positionsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">💼</div>
-          <p>No positions yet. Positions will appear here once trades are made.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trades Table -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Recent Trades</h2>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" id="refreshTradesBtn">🔄 Refresh</button>
-          <button class="btn btn-primary" id="exportCsvBtn">📥 Export CSV</button>
-        </div>
-      </div>
-      <div id="tradesContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <p>No trades yet. The bot buys when any side hits ≥90¢ (expected 99.5% win rate).</p>
-        </div>
-      </div>
-    </div>
-
-    </div><!-- End BTC Panel -->
-
-    <!-- ETH Bot Tab Panel -->
-    <div id="eth-panel" class="tab-panel">
-
-    <!-- Stats Grid -->
-    <div class="grid grid-4" style="margin-bottom: 24px;">
-      <div class="card stat-card">
-        <span class="stat-icon">📈</span>
-        <div class="stat-value" id="ethTotalPnL">$0.00</div>
-        <div class="stat-label">Total P&L</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">🎯</span>
-        <div class="stat-value" id="ethTotalTrades">0</div>
-        <div class="stat-label">Total Trades</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏳</span>
-        <div class="stat-value" id="ethActivePositions">0</div>
-        <div class="stat-label">Active Positions</div>
-      </div>
-      <div class="card stat-card">
-        <span class="stat-icon">⏱️</span>
-        <div class="stat-value" id="ethLastScan">--</div>
-        <div class="stat-label">Last Scan</div>
-      </div>
-    </div>
-
-    <!-- Trading Window Indicator -->
-    <div class="card" style="margin-bottom: 24px; padding: 16px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 1.5rem;" id="ethWindowIcon">⏰</span>
+      <div class="card">
+        <h2 class="card-title">Ethereum</h2>
+        <div class="form-row">
           <div>
-            <div style="font-weight: 600; font-size: 1rem;" id="ethWindowStatus">Trading Window</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="ethWindowDetails">Minutes 45-59 of each hour</div>
+            <div class="form-label">Enable Trading</div>
+            <div class="form-sublabel">Auto-buy when price reaches threshold</div>
+          </div>
+          <div id="ethToggle" class="toggle" onclick="toggleCrypto('ETH')"></div>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Bet Size</label>
+            <input type="number" id="ethBetSizeInput" class="field-input" value="90" min="1">
+          </div>
+          <div class="field">
+            <label class="field-label">Min Price (¢)</label>
+            <input type="number" id="ethMinPriceInput" class="field-input" value="90" min="50" max="99">
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="text-align: center;">
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700;" id="ethCurrentMinute">--</div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">Current Minute</div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="saveCryptoConfig('ETH')">Save</button>
+          <button class="btn btn-primary" onclick="forceScanCrypto('ETH')">Scan Markets</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h2 class="card-title" style="margin-bottom: 0;">Markets</h2>
+          <button class="btn btn-secondary" onclick="fetchCryptoMarkets('ETH')">Refresh</button>
+        </div>
+        <div id="ethMarketsContainer">
+          <div class="empty">
+            <div class="empty-icon">Ξ</div>
+            <p>No markets. Click Scan Markets to fetch.</p>
           </div>
-          <div id="ethWindowBadge" class="status-badge inactive" style="font-size: 0.9rem; padding: 10px 20px;">
-            <span>WAITING</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="panel">
+      <div class="card">
+        <h2 class="card-title">Global</h2>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Master Enable</div>
+            <div class="form-sublabel">Global on/off for all trading</div>
+          </div>
+          <div id="globalToggle" class="toggle" onclick="toggleBot()"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="approveBtn">Approve USDC</button>
+          <button class="btn btn-secondary" id="approveSellBtn">Approve Selling</button>
+          <button class="btn btn-secondary" id="resetBtn">Reset</button>
+          <button class="btn btn-danger" id="emergencyStopBtn">Stop</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Volatility Filter</h2>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Skip Volatile Hours</div>
+            <div class="form-sublabel">Avoid 9-10 AM, 3-4 PM ET</div>
+          </div>
+          <div id="volatileHoursToggle" class="toggle on" onclick="toggleSetting('volatileHours')"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Check Real-time Volatility</div>
+            <div class="form-sublabel">Binance price swing detection</div>
+          </div>
+          <div id="realtimeToggle" class="toggle on" onclick="toggleSetting('realtime')"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Check Spread</div>
+            <div class="form-sublabel">Skip wide bid-ask spreads</div>
+          </div>
+          <div id="spreadToggle" class="toggle on" onclick="toggleSetting('spread')"></div>
+        </div>
+        <div class="volatility-grid">
+          <div class="field">
+            <label class="field-label">Max Volatility (%)</label>
+            <input type="number" id="maxVolatilityInput" class="field-input" value="2.0" step="0.5">
+          </div>
+          <div class="field">
+            <label class="field-label">Max Spread (¢)</label>
+            <input type="number" id="maxSpreadInput" class="field-input" value="5" step="1">
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Control Panel -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">Ξ Ethereum Bot Controls</h2>
-      </div>
-      <div class="control-panel">
-        <div class="toggle-container">
-          <div id="ethBotToggle" class="toggle" onclick="toggleCrypto('ETH')"></div>
-          <span class="toggle-label" id="ethToggleLabel">ETH Disabled</span>
-        </div>
-        <div class="control-group">
-          <label class="control-label">Bet Size ($)</label>
-          <input type="number" id="ethBetSizeInput" class="control-input" min="1" step="1" value="90">
-        </div>
-        <div class="control-group">
-          <label class="control-label">Min Price (¢)</label>
-          <input type="number" id="ethMinPriceInput" class="control-input" min="50" max="99" step="1" value="90">
-        </div>
-        <button class="btn btn-secondary" onclick="saveCryptoConfig('ETH')">💾 Save ETH</button>
-        <button class="btn btn-primary" onclick="forceScanCrypto('ETH')">🔍 Scan ETH</button>
-      </div>
-    </div>
-
-    <!-- Live Markets -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">📡 ETH Live Markets</h2>
-        <button class="btn btn-secondary" onclick="fetchCryptoMarkets('ETH')">🔄 Refresh</button>
-      </div>
-      <div id="ethMarketsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">Ξ</div>
-          <p>No ETH market data yet. Click "Scan ETH" to fetch live Ethereum Up/Down markets.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveVolatilityConfig()">Save Settings</button>
         </div>
       </div>
     </div>
-
-    <!-- Positions & Winnings -->
-    <div class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
-        <h2 class="card-title">💰 Positions & Winnings</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-secondary" onclick="fetchPositions()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="claimAllWinnings()">💵 Claim Winnings</button>
-          <button class="btn btn-secondary" onclick="approveSell()">🔓 Approve Selling</button>
-          <button class="btn btn-danger" onclick="cashOutAll()">💸 Cash Out All</button>
-        </div>
-      </div>
-      <div id="ethPositionsContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">💼</div>
-          <p>No positions yet. Positions will appear here once trades are made.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Trades Table -->
-    <div class="card">
-      <div class="card-header">
-        <h2 class="card-title">Recent Trades</h2>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary" onclick="fetchStats()">🔄 Refresh</button>
-          <button class="btn btn-primary" onclick="exportTradesToCsv()">📥 Export CSV</button>
-        </div>
-      </div>
-      <div id="ethTradesContainer">
-        <div class="empty-state">
-          <div class="empty-state-icon">📭</div>
-          <p>No trades yet. The bot buys when any side hits ≥90¢ (expected 99.5% win rate).</p>
-        </div>
-      </div>
-    </div>
-
-    </div><!-- End ETH Panel -->
-
   </div>
 
-  <!-- Toast Container -->
-  <div id="toastContainer" class="toast-container"></div>
+  <!-- Toast -->
+  <div id="toastArea" class="toast-area"></div>
 
   <script>
-    // State
     let password = localStorage.getItem('botPassword') || '';
     let isConnected = false;
+    let volatilityConfig = { skipVolatileHours: true, checkRealTimeVolatility: true, checkSpread: true };
 
-    // Elements
     const passwordInput = document.getElementById('passwordInput');
-    const botStatus = document.getElementById('botStatus');
-    const botToggle = document.getElementById('botToggle');
-    const toggleLabel = document.getElementById('toggleLabel');
-    const betSizeInput = document.getElementById('btcBetSizeInput');
-    const maxCostInput = document.getElementById('btcMinPriceInput'); // Using min price as placeholder
-    const toastContainer = document.getElementById('toastContainer');
-
-    // Initialize
     passwordInput.value = password;
     if (password) fetchStats();
 
-    // Event Listeners
     passwordInput.addEventListener('input', (e) => {
       password = e.target.value;
       localStorage.setItem('botPassword', password);
       fetchStats();
     });
 
-    // Global controls - use safe addEventListener that checks element exists
-    if (botToggle) botToggle.addEventListener('click', toggleBot);
-    
-    const emergencyStopBtn = document.getElementById('emergencyStopBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const approveBtn = document.getElementById('approveBtn');
-    const refreshTradesBtn = document.getElementById('refreshTradesBtn');
-    const refreshMarketsBtn = document.getElementById('refreshMarketsBtn');
-    const refreshPositionsBtn = document.getElementById('refreshPositionsBtn');
-    const claimAllBtn = document.getElementById('claimAllBtn');
-    const exportCsvBtn = document.getElementById('exportCsvBtn');
-    const cashOutBtn = document.getElementById('cashOutBtn');
-    const approveSellBtn = document.getElementById('approveSellBtn');
-    
-    const checkClaimableBtn = document.getElementById('checkClaimableBtn');
-    const manualClaimBtn = document.getElementById('manualClaimBtn');
-    const bulkClaimBtn = document.getElementById('bulkClaimBtn');
-    
-    if (emergencyStopBtn) emergencyStopBtn.addEventListener('click', emergencyStop);
-    if (resetBtn) resetBtn.addEventListener('click', resetBot);
-    if (approveBtn) approveBtn.addEventListener('click', approveUsdc);
-    if (refreshTradesBtn) refreshTradesBtn.addEventListener('click', () => fetchStats());
-    if (refreshMarketsBtn) refreshMarketsBtn.addEventListener('click', fetchLiveMarkets);
-    if (refreshPositionsBtn) refreshPositionsBtn.addEventListener('click', fetchPositions);
-    if (checkClaimableBtn) checkClaimableBtn.addEventListener('click', checkClaimable);
-    if (claimAllBtn) claimAllBtn.addEventListener('click', claimAllWinnings);
-    if (manualClaimBtn) manualClaimBtn.addEventListener('click', manualClaimPosition);
-    if (bulkClaimBtn) bulkClaimBtn.addEventListener('click', bulkClaimAllHourly);
-    if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportTradesToCsv);
-    if (cashOutBtn) cashOutBtn.addEventListener('click', cashOutAll);
-    if (approveSellBtn) approveSellBtn.addEventListener('click', approveSelling);
-    
     // Tab switching
-    document.querySelectorAll('.main-tab').forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    document.querySelectorAll('.nav-link').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`${btn.dataset.tab}-panel`).classList.add('active');
+      });
     });
-    
-    // Update trading window status every second
-    setInterval(updateTradingWindow, 1000);
-    updateTradingWindow(); // Initial update
 
-    // API Functions
+    setInterval(updateTradingWindow, 1000);
+    updateTradingWindow();
+
+    document.getElementById('emergencyStopBtn')?.addEventListener('click', emergencyStop);
+    document.getElementById('resetBtn')?.addEventListener('click', resetBot);
+    document.getElementById('approveBtn')?.addEventListener('click', approveUsdc);
+    document.getElementById('approveSellBtn')?.addEventListener('click', approveSelling);
+    document.getElementById('refreshTradesBtn')?.addEventListener('click', fetchStats);
+    document.getElementById('refreshMarketsBtn')?.addEventListener('click', fetchLiveMarkets);
+    document.getElementById('bulkClaimBtn')?.addEventListener('click', bulkClaimAllHourly);
+    document.getElementById('manualClaimBtn')?.addEventListener('click', manualClaimPosition);
+    document.getElementById('exportCsvBtn')?.addEventListener('click', exportTradesToCsv);
+
     async function apiCall(endpoint, method = 'GET', body = null) {
       try {
-        const options = {
-          method,
-          headers: {
-            'Authorization': `Bearer ${password}`,
-            'Content-Type': 'application/json',
-          },
-        };
-        if (body) options.body = JSON.stringify(body);
-
-        const response = await fetch(`/api${endpoint}`, options);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'API Error');
-        }
-
+        const opts = { method, headers: { 'Authorization': `Bearer ${password}`, 'Content-Type': 'application/json' }};
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(`/api${endpoint}`, opts);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'API Error');
         isConnected = true;
-        updateConnectionStatus(true);
+        updateStatus(true);
         return data;
-      } catch (error) {
-        if (error.message === 'Unauthorized') {
-          isConnected = false;
-          updateConnectionStatus(false);
-        }
-        throw error;
+      } catch (e) {
+        if (e.message === 'Unauthorized') { isConnected = false; updateStatus(false); }
+        throw e;
       }
+    }
+
+    function updateStatus(connected) {
+      const el = document.getElementById('botStatus');
+      el.className = `status ${connected ? 'connected' : ''}`;
+      el.innerHTML = `<span class="status-dot"></span><span>${connected ? 'Connected' : 'Disconnected'}</span>`;
     }
 
     async function fetchStats() {
       try {
         const { data } = await apiCall('/stats');
-        console.log('Stats received:', data);
-        console.log('Recent trades count:', data.recentTrades ? data.recentTrades.length : 0);
         updateDashboard(data);
-        // Also fetch live markets for all cryptos, positions, and crypto settings
         fetchAllCryptoMarkets();
-        fetchPositions();
         fetchAllCryptoSettings();
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      }
+        fetchVolatilityConfig();
+      } catch (e) { console.error(e); }
     }
 
-    async function fetchLiveMarkets() {
-      try {
-        const { data } = await apiCall('/markets/live');
-        renderLiveMarkets(data);
-      } catch (error) {
-        console.error('Failed to fetch live markets:', error);
-      }
+    function updateDashboard(data) {
+      const pnl = data.status.totalPnL || 0;
+      ['', 'eth'].forEach(p => {
+        const pnlEl = document.getElementById(p ? `${p}TotalPnL` : 'totalPnL');
+        if (pnlEl) { pnlEl.textContent = `$${pnl.toFixed(0)}`; pnlEl.className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`; }
+        const tEl = document.getElementById(p ? `${p}TotalTrades` : 'totalTrades');
+        if (tEl) tEl.textContent = data.status.totalTrades;
+        const posEl = document.getElementById(p ? `${p}ActivePositions` : 'activePositions');
+        if (posEl) posEl.textContent = data.status.activePositions;
+        const scanEl = document.getElementById(p ? `${p}LastScan` : 'lastScan');
+        if (scanEl) scanEl.textContent = data.status.lastScan ? formatTime(data.status.lastScan) : '—';
+      });
+      updateGlobalToggle(data.config.botEnabled);
+      renderTrades(data.recentTrades);
     }
 
-    async function fetchPositions() {
-      try {
-        const btn = document.getElementById('refreshPositionsBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div>';
-        
-        const { data } = await apiCall('/positions');
-        renderPositions(data);
-      } catch (error) {
-        console.error('Failed to fetch positions:', error);
-        // Show empty state on error
-        renderPositions([]);
-      } finally {
-        const btn = document.getElementById('refreshPositionsBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🔄 Refresh';
-      }
-    }
-
-    async function checkClaimable() {
-      try {
-        const btn = document.getElementById('checkClaimableBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Checking...';
-        
-        const result = await apiCall('/positions/claimable');
-        const claimableInfo = document.getElementById('claimableInfo');
-        const claimableCount = document.getElementById('claimableCount');
-        
-        if (result.success && result.data && result.data.length > 0) {
-          claimableInfo.style.display = 'block';
-          claimableCount.innerHTML = '🎉 Found <strong>' + result.data.length + '</strong> claimable position(s)! Click "Claim All Winnings" to redeem.';
-          showToast('Found ' + result.data.length + ' claimable positions!', 'success');
-        } else {
-          claimableInfo.style.display = 'block';
-          claimableCount.innerHTML = '📭 No claimable positions found. Positions may still be active or already claimed.';
-          showToast('No claimable positions found', 'warning');
-        }
-      } catch (error) {
-        showToast('Failed to check claimable: ' + error.message, 'error');
-        const claimableInfo = document.getElementById('claimableInfo');
-        claimableInfo.style.display = 'none';
-      } finally {
-        const btn = document.getElementById('checkClaimableBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🔍 Check Claimable';
-      }
-    }
-
-    async function claimAllWinnings() {
-      if (!confirm('Claim all available winnings? This will send transactions to the blockchain.')) return;
-      
-      try {
-        const btn = document.getElementById('claimAllBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Claiming...';
-        
-        await apiCall('/positions/claim', 'POST');
-        showToast('Claim started! Check Railway logs for progress.', 'success');
-        
-        // Hide the claimable info after claiming
-        const claimableInfo = document.getElementById('claimableInfo');
-        if (claimableInfo) claimableInfo.style.display = 'none';
-        
-        // Refresh positions after a delay
-        setTimeout(fetchPositions, 5000);
-      } catch (error) {
-        showToast('Failed to claim: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('claimAllBtn');
-        btn.disabled = false;
-        btn.innerHTML = '💵 Claim All Winnings';
-      }
-    }
-
-    async function manualClaimPosition() {
-      const conditionIdInput = document.getElementById('manualConditionId');
-      const negRiskCheckbox = document.getElementById('negRiskCheckbox');
-      const conditionId = conditionIdInput.value.trim();
-      
-      if (!conditionId) {
-        showToast('Please enter a Condition ID', 'error');
-        return;
-      }
-      
-      if (!conditionId.startsWith('0x')) {
-        showToast('Condition ID should start with 0x', 'error');
-        return;
-      }
-      
-      if (!confirm('Claim this position?\n\nCondition ID: ' + conditionId + '\nNeg Risk: ' + (negRiskCheckbox.checked ? 'Yes' : 'No') + '\n\nThis will send a transaction to the blockchain.')) {
-        return;
-      }
-      
-      try {
-        const btn = document.getElementById('manualClaimBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Claiming...';
-        
-        await apiCall('/positions/claim/' + encodeURIComponent(conditionId), 'POST', {
-          negRisk: negRiskCheckbox.checked
-        });
-        
-        showToast('Claim started for ' + conditionId.substring(0, 10) + '...! Check Railway logs.', 'success');
-        conditionIdInput.value = '';
-      } catch (error) {
-        showToast('Failed to claim: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('manualClaimBtn');
-        btn.disabled = false;
-        btn.innerHTML = '💵 Claim This';
-      }
-    }
-
-    async function bulkClaimAllHourly() {
-      const daysSelect = document.getElementById('claimDaysBack');
-      const daysBack = parseInt(daysSelect.value) || 7;
-      
-      if (!confirm('🚀 BULK CLAIM ALL RESOLVED HOURLY MARKETS\n\nThis will attempt to claim ALL resolved BTC & ETH hourly markets from the last ' + daysBack + ' days.\n\n• Markets where you have no position will be skipped\n• This may take several minutes\n• Each successful claim costs gas\n\nContinue?')) {
-        return;
-      }
-      
-      try {
-        const btn = document.getElementById('bulkClaimBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Claiming all...';
-        
-        await apiCall('/positions/claim-all-hourly', 'POST', { daysBack });
-        
-        showToast('🎯 Bulk claim started! Check Railway logs for progress. This may take several minutes.', 'success');
-      } catch (error) {
-        showToast('Failed to start bulk claim: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('bulkClaimBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🎯 Claim ALL Resolved Markets';
-      }
-    }
-
-    async function cashOutAll() {
-      if (!confirm('⚠️ CASH OUT ALL POSITIONS?\n\nThis will MARKET SELL all your open positions immediately at the best available bid price.\n\nYou may incur losses. Are you sure?')) return;
-      
-      try {
-        const btn = document.getElementById('cashOutBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Selling...';
-        
-        await apiCall('/positions/cashout', 'POST');
-        showToast('Cash out started! Check Railway logs for progress.', 'success');
-        
-        // Refresh positions after a delay
-        setTimeout(fetchPositions, 5000);
-      } catch (error) {
-        showToast('Failed to cash out: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('cashOutBtn');
-        btn.disabled = false;
-        btn.innerHTML = '💸 Cash Out All';
-      }
-    }
-
-    async function approveSelling() {
-      try {
-        const btn = document.getElementById('approveSellBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Approving...';
-        
-        await apiCall('/bot/approve-sell', 'POST');
-        showToast('CTF approval started! This allows selling positions. Check logs for progress.', 'success');
-      } catch (error) {
-        showToast('Failed to approve: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('approveSellBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🔓 Approve Selling';
-      }
+    function updateGlobalToggle(on) {
+      const el = document.getElementById('globalToggle');
+      if (el) el.className = `toggle ${on ? 'on' : ''}`;
     }
 
     function updateTradingWindow() {
-      const now = new Date();
-      const minute = now.getMinutes();
-      const windowStart = 45;
-      const windowEnd = 59;
-      const inWindow = minute >= windowStart && minute <= windowEnd;
-      
-      // Update ALL crypto tabs with the same trading window info
-      const prefixes = ['', 'eth']; // '' is for BTC
-      
-      prefixes.forEach(prefix => {
-        const minuteId = prefix ? `${prefix}CurrentMinute` : 'currentMinute';
-        const badgeId = prefix ? `${prefix}WindowBadge` : 'windowBadge';
-        const iconId = prefix ? `${prefix}WindowIcon` : 'windowIcon';
-        const statusId = prefix ? `${prefix}WindowStatus` : 'windowStatus';
-        const detailsId = prefix ? `${prefix}WindowDetails` : 'windowDetails';
-        
-        const minuteEl = document.getElementById(minuteId);
-        const badge = document.getElementById(badgeId);
-        const icon = document.getElementById(iconId);
-        const status = document.getElementById(statusId);
-        const details = document.getElementById(detailsId);
-        
-        if (minuteEl) minuteEl.textContent = minute.toString().padStart(2, '0');
-        
-        if (inWindow) {
-          if (badge) {
-            badge.className = 'status-badge active';
-            badge.innerHTML = '<span>🟢 TRADING</span>';
-          }
-          if (icon) icon.textContent = '✅';
-          if (status) {
-            status.textContent = 'Trading Window OPEN';
-            status.style.color = 'var(--success)';
-          }
-          if (details) details.textContent = `${windowEnd - minute + 1} minutes remaining`;
-        } else {
-          const minutesUntil = windowStart - minute;
-          if (badge) {
-            badge.className = 'status-badge warning';
-            badge.innerHTML = '<span>⏳ WAITING</span>';
-          }
-          if (icon) icon.textContent = '⏰';
-          if (status) {
-            status.textContent = 'Trading Window Closed';
-            status.style.color = 'var(--warning)';
-          }
-          if (details) details.textContent = `Opens in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''} (at :${windowStart})`;
-        }
-      });
+      const m = new Date().getMinutes();
+      const open = m >= 45 && m <= 59;
+      document.getElementById('currentMinute').textContent = m.toString().padStart(2, '0');
+      const pill = document.getElementById('windowPill');
+      const icon = document.getElementById('windowIcon');
+      const status = document.getElementById('windowStatus');
+      const details = document.getElementById('windowDetails');
+      if (open) {
+        pill.className = 'window-pill active'; pill.textContent = 'Active';
+        icon.textContent = '✅'; status.textContent = 'Window Open';
+        details.textContent = `${59 - m + 1}m remaining`;
+      } else {
+        pill.className = 'window-pill waiting'; pill.textContent = 'Waiting';
+        icon.textContent = '⏰'; status.textContent = 'Window Closed';
+        details.textContent = `Opens in ${45 - m}m`;
+      }
     }
 
     async function toggleBot() {
       try {
         const { data } = await apiCall('/bot/toggle', 'POST');
-        updateBotState(data.enabled);
-        showToast(data.enabled ? 'Bot enabled' : 'Bot disabled', 'success');
-      } catch (error) {
-        showToast('Failed to toggle bot', 'error');
-      }
+        updateGlobalToggle(data.enabled);
+        toast(data.enabled ? 'Bot enabled' : 'Bot disabled');
+      } catch (e) { toast('Failed', true); }
     }
 
-    async function saveConfig() {
+    async function toggleCrypto(c) {
       try {
-        const betSize = betSizeInput ? parseFloat(betSizeInput.value) : 90;
-        await apiCall('/config', 'POST', {
-          betSize: betSize,
-          maxCombinedCost: 1.05, // Fixed default
-        });
-        showToast('Configuration saved', 'success');
-      } catch (error) {
-        showToast('Failed to save config', 'error');
-      }
+        const { data } = await apiCall(`/crypto/${c}/toggle`, 'POST');
+        document.getElementById(`${c.toLowerCase()}Toggle`).className = `toggle ${data.enabled ? 'on' : ''}`;
+        toast(`${c} ${data.enabled ? 'enabled' : 'disabled'}`);
+      } catch (e) { toast('Failed', true); }
     }
 
-    async function forceScan() {
+    async function saveCryptoConfig(c) {
       try {
-        const btn = document.getElementById('forceScanBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Scanning...';
-        
-        const { data } = await apiCall('/bot/scan', 'POST');
-        showToast(`Scan complete: ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
-        
-        // Refresh both stats and live markets
-        await fetchStats();
-        await fetchLiveMarkets();
-      } catch (error) {
-        showToast('Scan failed: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('forceScanBtn');
-        btn.disabled = false;
-        btn.innerHTML = '🔍 Force Scan';
-      }
+        const betSize = parseFloat(document.getElementById(`${c.toLowerCase()}BetSizeInput`).value);
+        const minPrice = parseFloat(document.getElementById(`${c.toLowerCase()}MinPriceInput`).value) / 100;
+        await apiCall(`/crypto/${c}/settings`, 'POST', { betSize, minPrice });
+        toast(`${c} saved`);
+      } catch (e) { toast('Failed', true); }
     }
 
-    async function emergencyStop() {
-      if (!confirm('Are you sure you want to emergency stop the bot?')) return;
-      
+    async function forceScanCrypto(c) {
       try {
-        await apiCall('/bot/stop', 'POST');
-        showToast('Bot stopped', 'success');
-        fetchStats();
-      } catch (error) {
-        showToast('Failed to stop bot', 'error');
-      }
+        toast(`Scanning ${c}...`);
+        const { data } = await apiCall(`/bot/scan/${c}`, 'POST');
+        toast(`${data.markets} markets, ${data.opportunities} opps`);
+        await fetchSingleCryptoMarkets(c);
+      } catch (e) { toast(`Failed: ${e.message}`, true); }
     }
 
-    async function resetBot() {
-      if (!confirm('Are you sure you want to clear all trade history? This cannot be undone.')) return;
-      
+    async function fetchSingleCryptoMarkets(c) {
       try {
-        await apiCall('/bot/reset', 'POST');
-        showToast('Trade history cleared', 'success');
-        fetchStats();
-      } catch (error) {
-        showToast('Failed to reset: ' + error.message, 'error');
-      }
+        const { data } = await apiCall(`/markets/live/${c}`);
+        renderMarkets(data, c);
+      } catch (e) { console.error(e); }
     }
 
-    function exportTradesToCsv() {
+    async function fetchAllCryptoMarkets() {
       try {
-        const btn = document.getElementById('exportCsvBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Exporting...';
-        
-        // Create a download link with auth header
-        const link = document.createElement('a');
-        link.href = `/api/trades/export?auth=${encodeURIComponent(password)}`;
-        link.download = `polymarket-trades-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        showToast('CSV export started!', 'success');
-      } catch (error) {
-        showToast('Failed to export: ' + error.message, 'error');
-      } finally {
-        setTimeout(() => {
-          const btn = document.getElementById('exportCsvBtn');
-          btn.disabled = false;
-          btn.innerHTML = '📥 Export CSV';
-        }, 1000);
-      }
+        const { data } = await apiCall('/markets/live-all');
+        ['BTC', 'ETH'].forEach(c => { if (data[c]) renderMarkets(data[c], c); });
+      } catch (e) { console.error(e); }
     }
 
-    async function approveUsdc() {
-      try {
-        const btn = document.getElementById('approveBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<div class="spinner"></div> Approving...';
-        
-        await apiCall('/bot/approve', 'POST');
-        showToast('USDC approved for Polymarket CLOB trading!', 'success');
-      } catch (error) {
-        showToast('Failed to approve: ' + error.message, 'error');
-      } finally {
-        const btn = document.getElementById('approveBtn');
-        btn.disabled = false;
-        btn.innerHTML = '✅ Approve USDC';
-      }
-    }
-
-    // UI Updates
-    function updateConnectionStatus(connected) {
-      botStatus.className = `status-badge ${connected ? 'active' : 'inactive'}`;
-      botStatus.innerHTML = `<span class="status-dot"></span><span>${connected ? 'Connected' : 'Disconnected'}</span>`;
-    }
-
-    function updateBotState(enabled) {
-      // Update BTC toggle
-      botToggle.className = `toggle ${enabled ? 'active' : ''}`;
-      toggleLabel.textContent = enabled ? 'Bot Enabled' : 'Bot Disabled';
-      
-      // Sync to all crypto tabs
-      ['eth'].forEach(prefix => {
-        const toggle = document.getElementById(`${prefix}BotToggle`);
-        const label = document.getElementById(`${prefix}ToggleLabel`);
-        if (toggle) toggle.className = `toggle ${enabled ? 'active' : ''}`;
-        if (label) label.textContent = enabled ? 'Bot Enabled' : 'Bot Disabled';
-      });
-    }
-
-    function updateDashboard(data) {
-      // Stats - update on ALL crypto tabs
-      const pnl = data.status.totalPnL || 0;
-      const cryptos = ['', 'eth']; // '' is for BTC (no prefix)
-      
-      cryptos.forEach(prefix => {
-        const pnlId = prefix ? `${prefix}TotalPnL` : 'totalPnL';
-        const tradesId = prefix ? `${prefix}TotalTrades` : 'totalTrades';
-        const positionsId = prefix ? `${prefix}ActivePositions` : 'activePositions';
-        const scanId = prefix ? `${prefix}LastScan` : 'lastScan';
-        
-        const pnlEl = document.getElementById(pnlId);
-        if (pnlEl) {
-          pnlEl.textContent = `$${pnl.toFixed(2)}`;
-          pnlEl.className = `stat-value ${pnl >= 0 ? 'positive' : 'negative'}`;
-        }
-        
-        const tradesEl = document.getElementById(tradesId);
-        if (tradesEl) tradesEl.textContent = data.status.totalTrades;
-        
-        const positionsEl = document.getElementById(positionsId);
-        if (positionsEl) positionsEl.textContent = data.status.activePositions;
-        
-        const lastScan = data.status.lastScan;
-        const scanEl = document.getElementById(scanId);
-        if (scanEl) scanEl.textContent = lastScan ? formatTime(lastScan) : '--';
-      });
-
-      // Config - update BTC inputs (primary)
-      if (betSizeInput) betSizeInput.value = data.config.betSize;
-      
-      // Also sync config to other crypto tabs
-      ['eth'].forEach(prefix => {
-        const betInput = document.getElementById(`${prefix}BetSizeInput`);
-        if (betInput) betInput.value = data.config.betSize;
-      });
-      
-      updateBotState(data.config.botEnabled);
-
-      // Trading mode indicator
-      updateTradingMode(data.status.isReadOnly, data.status.walletAddress, data.status.initError);
-
-      // Trades - render on ALL crypto tabs
-      console.log('Rendering trades, count:', data.recentTrades ? data.recentTrades.length : 0);
-      try {
-        renderTrades(data.recentTrades);
-      } catch (e) {
-        console.error('Error in renderTrades:', e);
-      }
-      ['eth'].forEach(prefix => {
-        try {
-          renderTradesForCrypto(data.recentTrades, prefix);
-        } catch (e) {
-          console.error('Error in renderTradesForCrypto for ' + prefix + ':', e);
-        }
-      });
-    }
-    
-    function renderTradesForCrypto(trades, prefix) {
-      const containerId = prefix + 'TradesContainer';
-      const container = document.getElementById(containerId);
-      if (!container) {
-        console.error('Container not found: ' + containerId);
-        return;
-      }
-      
-      if (!trades || trades.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No trades yet. The bot buys when any side hits ≥90¢ (expected 99.5% win rate).</p></div>';
-        return;
-      }
-      
-      // Build HTML using string concatenation to avoid template literal issues
-      let html = '<table class="trades-table"><thead><tr><th>Market</th><th>Side</th><th>Price</th><th>Cost</th><th>Status</th><th>P&L</th><th>Time</th></tr></thead><tbody>';
-      
-      trades.forEach(function(t) {
-        try {
-          const side = t.side || (t.up_price > t.down_price ? 'up' : 'down');
-          const price = t.side === 'up' ? t.up_price : t.side === 'down' ? t.down_price : (t.up_price + t.down_price) / 2;
-          const sideColor = side === 'up' ? 'var(--success)' : 'var(--danger)';
-          const sideIcon = side === 'up' ? '📈 UP' : '📉 DOWN';
-          const pnlDisplay = t.pnl !== null && t.pnl !== undefined ? '$' + t.pnl.toFixed(2) : '--';
-          const costDisplay = t.combined_cost ? '$' + t.combined_cost.toFixed(2) : '--';
-          const priceDisplay = price ? (price * 100).toFixed(1) + '¢' : '--';
-          
-          html += '<tr>';
-          html += '<td class="trade-market" title="' + (t.market_question || '') + '">' + (t.market_question || 'Unknown') + '</td>';
-          html += '<td><span style="color: ' + sideColor + '; font-weight: 600;">' + sideIcon + '</span></td>';
-          html += '<td>' + priceDisplay + '</td>';
-          html += '<td>' + costDisplay + '</td>';
-          html += '<td><span class="trade-status ' + (t.status || 'unknown') + '">' + (t.status || 'unknown') + '</span></td>';
-          html += '<td>' + pnlDisplay + '</td>';
-          html += '<td>' + formatTime(t.created_at) + '</td>';
-          html += '</tr>';
-        } catch (err) {
-          console.error('Error rendering trade for ' + prefix + ':', err, t);
-        }
-      });
-      
-      html += '</tbody></table>';
-      container.innerHTML = html;
-      console.log('Rendered ' + trades.length + ' trades to ' + prefix.toUpperCase() + ' tab');
-    }
-
-    function updateTradingMode(isReadOnly, walletAddress, initError) {
-      const tradingMode = document.getElementById('tradingMode');
-      
-      if (initError) {
-        tradingMode.className = 'status-badge inactive';
-        tradingMode.innerHTML = '❌ Init Error';
-        tradingMode.title = `Initialization failed: ${initError}`;
-        console.error('Client init error:', initError);
-      } else if (isReadOnly) {
-        tradingMode.className = 'status-badge warning';
-        tradingMode.innerHTML = '⚠️ Read-Only';
-        tradingMode.title = 'No private key configured - cannot execute trades';
-      } else {
-        tradingMode.className = 'status-badge trading';
-        const shortAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
-        tradingMode.innerHTML = `💰 Trading ${shortAddr}`;
-        tradingMode.title = walletAddress ? `Wallet: ${walletAddress}` : 'Trading enabled';
-      }
-    }
-
-    function renderLiveMarkets(markets, crypto = 'BTC') {
-      // Container IDs: BTC uses 'liveMarketsContainer', others use '{crypto}MarketsContainer'
-      const containerId = crypto === 'BTC' ? 'liveMarketsContainer' : `${crypto.toLowerCase()}MarketsContainer`;
-      const container = document.getElementById(containerId);
-      if (!container) {
-        console.error(`Container not found: ${containerId}`);
-        return;
-      }
-      
-      if (!markets || markets.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">📊</div>
-            <p>No market data yet. Click "Force Scan" to fetch live markets.</p>
-          </div>
-        `;
-        return;
-      }
-
-      // Sort: viable first, then by hours left
-      markets.sort((a, b) => {
-        if (a.isViable !== b.isViable) return b.isViable - a.isViable;
-        return a.hoursLeft - b.hoursLeft;
-      });
-
-      container.innerHTML = `
-        <div class="markets-grid">
-          ${markets.map(m => {
-            const threshold = m.threshold ? (m.threshold * 100).toFixed(0) : '80';
-            return `
-            <div class="market-card ${m.isViable ? 'viable' : ''}">
-              <div class="market-title" title="${m.title}">${m.title}</div>
-              <div class="market-prices">
-                <div class="price-box" style="${m.viableSide === 'up' ? 'border: 2px solid var(--success); box-shadow: 0 0 10px rgba(0,221,136,0.3);' : ''}">
-                  <div class="price-label">Up ${m.viableSide === 'up' ? '🎯' : ''}</div>
-                  <div class="price-value up" style="${m.upPrice >= (m.threshold || 0.80) ? 'font-weight: 700;' : ''}">${(m.upPrice * 100).toFixed(1)}¢</div>
-                </div>
-                <div class="price-box" style="${m.viableSide === 'down' ? 'border: 2px solid var(--success); box-shadow: 0 0 10px rgba(0,221,136,0.3);' : ''}">
-                  <div class="price-label">Down ${m.viableSide === 'down' ? '🎯' : ''}</div>
-                  <div class="price-value down" style="${m.downPrice >= (m.threshold || 0.80) ? 'font-weight: 700;' : ''}">${(m.downPrice * 100).toFixed(1)}¢</div>
-                </div>
-              </div>
-              <div class="market-meta">
-                <div class="market-combined">
-                  Combined: ${(m.combinedCost * 100).toFixed(1)}¢
-                </div>
-                <div class="market-time">
-                  ⏱️ ${m.hoursLeft.toFixed(1)}h left
-                </div>
-              </div>
-              <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                ${m.isViable 
-                  ? `<span class="viable-badge">✓ Buy ${m.viableSide?.toUpperCase()} @ ${((m.viableSide === 'up' ? m.upPrice : m.downPrice) * 100).toFixed(0)}¢</span>` 
-                  : `<span class="not-viable-badge">— Waiting for ≥${threshold}¢</span>`
-                }
-                <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
-                  EV: ${m.expectedValue >= 0 ? '+' : ''}$${m.expectedValue.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          `;}).join('')}
-        </div>
-      `;
-    }
-
-    function renderPositions(positions) {
-      // Render to all crypto tabs
-      ['positionsContainer', 'ethPositionsContainer'].forEach(containerId => {
-        renderPositionsToContainer(positions, containerId);
-      });
-    }
-    
-    function renderPositionsToContainer(positions, containerId) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      
-      if (!positions || positions.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">💼</div>
-            <p>No positions found. Make some trades first, or the API may not have position data available.</p>
-          </div>
-        `;
-        return;
-      }
-
-      // Calculate summary stats
-      const totalPositions = positions.length;
-      const claimable = positions.filter(p => p.won || (p.market?.resolved && p.outcome?.winner));
-      const totalClaimable = claimable.reduce((sum, p) => sum + parseFloat(p.size || p.amount || 0), 0);
-      const openPositions = positions.filter(p => !p.market?.resolved);
-
-      container.innerHTML = `
-        <div class="positions-summary">
-          <div class="summary-item">
-            <div class="summary-value">${totalPositions}</div>
-            <div class="summary-label">Total Positions</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-value">${openPositions.length}</div>
-            <div class="summary-label">Open</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-value claimable">${claimable.length}</div>
-            <div class="summary-label">Claimable</div>
-          </div>
-          <div class="summary-item">
-            <div class="summary-value claimable">$${totalClaimable.toFixed(2)}</div>
-            <div class="summary-label">Total Winnings</div>
-          </div>
-        </div>
-        <div class="positions-grid">
-          ${positions.map(p => {
-            const isClaimable = p.won || (p.market?.resolved && p.outcome?.winner);
-            const isOpen = !p.market?.resolved;
-            const isLost = p.market?.resolved && !isClaimable;
-            const outcome = p.outcome?.name || p.side || 'Unknown';
-            const isUp = outcome.toLowerCase().includes('up') || outcome.toLowerCase().includes('yes');
-            const size = parseFloat(p.size || p.amount || 0);
-            const avgPrice = parseFloat(p.avgPrice || p.price || 0);
-            const marketTitle = p.market?.question || p.title || 'Unknown Market';
-            
-            return `
-              <div class="position-card ${isClaimable ? 'claimable' : ''} ${isOpen ? 'pending' : ''}">
-                <div class="position-header">
-                  <div class="position-market" title="${marketTitle}">${marketTitle}</div>
-                  <span class="position-outcome ${isUp ? 'up' : 'down'}">${outcome}</span>
-                </div>
-                <div class="position-details">
-                  <div class="position-detail">
-                    <div class="position-detail-label">Size</div>
-                    <div class="position-detail-value">${size.toFixed(2)} shares</div>
-                  </div>
-                  <div class="position-detail">
-                    <div class="position-detail-label">Avg Price</div>
-                    <div class="position-detail-value">${(avgPrice * 100).toFixed(1)}¢</div>
-                  </div>
-                  <div class="position-detail">
-                    <div class="position-detail-label">Cost</div>
-                    <div class="position-detail-value">$${(size * avgPrice).toFixed(2)}</div>
-                  </div>
-                  <div class="position-detail">
-                    <div class="position-detail-label">Value</div>
-                    <div class="position-detail-value" style="color: ${isClaimable ? 'var(--success)' : 'inherit'}">
-                      ${isClaimable ? '$' + size.toFixed(2) : isOpen ? '?' : '$0.00'}
-                    </div>
-                  </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  ${isClaimable 
-                    ? '<span class="claimable-badge">💵 Claimable</span>' 
-                    : isOpen 
-                      ? '<span class="position-status open">⏳ Open</span>'
-                      : '<span class="position-status lost">❌ Lost</span>'
-                  }
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
-
-    function renderTrades(trades) {
-      const container = document.getElementById('tradesContainer');
-      if (!container) {
-        console.error('tradesContainer not found');
-        return;
-      }
-      
-      if (!trades || trades.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No trades yet. The bot will automatically buy when any side hits ≥90¢.</p></div>';
-        return;
-      }
-
-      // Build HTML using string concatenation to avoid template literal issues
-      let html = '<table class="trades-table"><thead><tr><th>Market</th><th>Side</th><th>Price</th><th>Cost</th><th>Status</th><th>P&L</th><th>Time</th></tr></thead><tbody>';
-      
-      trades.forEach(function(t) {
-        try {
-          const isSingleLeg = t.trade_type === 'single_leg';
-          const side = t.side || (t.up_price > t.down_price ? 'up' : 'down');
-          const price = isSingleLeg 
-            ? (t.side === 'up' ? t.up_price : t.down_price)
-            : (t.up_price + t.down_price) / 2;
-          const sideColor = side === 'up' ? 'var(--success)' : 'var(--danger)';
-          const sideIcon = side === 'up' ? '📈 UP' : '📉 DOWN';
-          const pnlDisplay = t.pnl !== null && t.pnl !== undefined ? '$' + t.pnl.toFixed(2) : '--';
-          const costDisplay = t.combined_cost ? '$' + t.combined_cost.toFixed(2) : '--';
-          const priceDisplay = price ? (price * 100).toFixed(1) + '¢' : '--';
-          
-          html += '<tr>';
-          html += '<td class="trade-market" title="' + (t.market_question || '') + '">' + (t.market_question || 'Unknown') + '</td>';
-          html += '<td><span style="color: ' + sideColor + '; font-weight: 600;">' + sideIcon + '</span></td>';
-          html += '<td>' + priceDisplay + '</td>';
-          html += '<td>' + costDisplay + '</td>';
-          html += '<td><span class="trade-status ' + (t.status || 'unknown') + '">' + (t.status || 'unknown') + '</span></td>';
-          html += '<td>' + pnlDisplay + '</td>';
-          html += '<td>' + formatTime(t.created_at) + '</td>';
-          html += '</tr>';
-        } catch (err) {
-          console.error('Error rendering trade:', err, t);
-        }
-      });
-      
-      html += '</tbody></table>';
-      container.innerHTML = html;
-      console.log('Rendered ' + trades.length + ' trades to BTC tab');
-    }
-
-    function formatTime(isoString) {
-      const date = new Date(isoString);
-      const now = new Date();
-      const diff = Math.floor((now - date) / 1000);
-      
-      if (diff < 60) return `${diff}s ago`;
-      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-      return date.toLocaleDateString();
-    }
-
-    function showToast(message, type = 'success') {
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.innerHTML = `<span>${type === 'success' ? '✓' : '✕'}</span>${message}`;
-      toastContainer.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
-
-    // ============================================
-    // TAB SWITCHING
-    // ============================================
-    
-    // Supported crypto tabs
-    const CRYPTO_TABS = ['btc', 'eth'];
-    
-    function switchTab(tabId) {
-      // Update tab buttons
-      document.querySelectorAll('.main-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.tab === tabId);
-      });
-      
-      // Update tab panels
-      document.querySelectorAll('.tab-panel').forEach(panel => {
-        panel.classList.toggle('active', panel.id === `${tabId}-panel`);
-      });
-      
-      // Fetch data for the active tab
-      if (CRYPTO_TABS.includes(tabId) && tabId !== 'btc') {
-        // Fetch markets for the selected crypto
-        fetchSingleCryptoMarkets(tabId.toUpperCase());
-      }
-    }
-    
-    // ============================================
-    // MULTI-CRYPTO FUNCTIONS
-    // ============================================
-    
-    async function fetchCryptoMarkets(crypto) {
-      try {
-        const containerId = `${crypto.toLowerCase()}MarketsContainer`;
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        
-        const { data } = await apiCall(`/markets/live/${crypto}`);
-        renderCryptoMarkets(crypto, data);
-      } catch (error) {
-        console.error(`Failed to fetch ${crypto} markets:`, error);
-      }
-    }
-    
-    function renderCryptoMarkets(crypto, markets) {
-      const containerId = `${crypto.toLowerCase()}MarketsContainer`;
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      
-      if (!markets || markets.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">${getCryptoIcon(crypto)}</div>
-            <p>No ${crypto} markets found. Markets may be closed or not yet available.</p>
-          </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = `
-        <div class="markets-grid">
-          ${markets.map(m => `
-            <div class="market-card ${m.isViable ? 'viable' : ''}">
-              <div class="market-header">
-                <span class="market-title" title="${m.title}">${m.title}</span>
-                <span class="market-time">${m.hoursLeft.toFixed(1)}h left</span>
-              </div>
-              <div class="market-prices">
-                <div class="price-box ${m.viableSide === 'up' ? 'highlight' : ''}">
-                  <span class="price-label">📈 UP</span>
-                  <span class="price-value">${(m.upPrice * 100).toFixed(1)}¢</span>
-                </div>
-                <div class="price-box ${m.viableSide === 'down' ? 'highlight' : ''}">
-                  <span class="price-label">📉 DOWN</span>
-                  <span class="price-value">${(m.downPrice * 100).toFixed(1)}¢</span>
-                </div>
-              </div>
-              <div class="market-footer">
-                <span class="combined-cost">Combined: ${(m.combinedCost * 100).toFixed(1)}¢</span>
-                ${m.isViable ? `
-                  <span class="viable-badge">
-                    ✨ Buy ${m.viableSide.toUpperCase()} @ ${((m.viableSide === 'up' ? m.upPrice : m.downPrice) * 100).toFixed(0)}¢
-                  </span>
-                ` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    }
-    
-    function getCryptoIcon(crypto) {
-      const icons = { BTC: '₿', ETH: 'Ξ', XRP: '✕', SOL: '◎' };
-      return icons[crypto] || '🪙';
-    }
-    
-    async function forceScanCrypto(crypto) {
-      console.log(`[forceScanCrypto] Starting scan for ${crypto}`);
-      try {
-        showToast(`Scanning ${crypto} markets...`, 'success');
-        console.log(`[forceScanCrypto] Calling API: /bot/scan/${crypto}`);
-        
-        const response = await apiCall(`/bot/scan/${crypto}`, 'POST');
-        console.log(`[forceScanCrypto] API response:`, response);
-        
-        const data = response.data;
-        if (data) {
-          showToast(`${crypto} scan complete! Found ${data.markets} markets, ${data.opportunities} opportunities`, 'success');
-        } else {
-          showToast(`${crypto} scan complete!`, 'success');
-        }
-        
-        // Refresh the markets display for this crypto
-        console.log(`[forceScanCrypto] Refreshing markets display for ${crypto}`);
-        await fetchSingleCryptoMarkets(crypto);
-      } catch (error) {
-        console.error(`[forceScanCrypto] Error scanning ${crypto}:`, error);
-        showToast(`Failed to scan ${crypto}: ${error.message}`, 'error');
-      }
-    }
-    
-    // Fetch markets for a single crypto
-    async function fetchSingleCryptoMarkets(crypto) {
-      try {
-        const { data } = await apiCall(`/markets/live/${crypto}`);
-        renderLiveMarkets(data, crypto);
-      } catch (error) {
-        console.error(`Failed to fetch ${crypto} markets:`, error);
-      }
-    }
-    
-    // Toggle a specific crypto on/off
-    async function toggleCrypto(crypto) {
-      try {
-        const { data } = await apiCall(`/crypto/${crypto}/toggle`, 'POST');
-        updateCryptoToggle(crypto, data.enabled);
-        showToast(`${crypto} ${data.enabled ? 'enabled' : 'disabled'}`, 'success');
-      } catch (error) {
-        showToast(`Failed to toggle ${crypto}: ${error.message}`, 'error');
-      }
-    }
-    
-    // Save settings for a specific crypto
-    async function saveCryptoConfig(crypto) {
-      try {
-        const betSizeInput = document.getElementById(`${crypto.toLowerCase()}BetSizeInput`);
-        const minPriceInput = document.getElementById(`${crypto.toLowerCase()}MinPriceInput`);
-        
-        const betSize = parseFloat(betSizeInput.value);
-        const minPrice = parseFloat(minPriceInput.value) / 100; // Convert cents to decimal
-        
-        await apiCall(`/crypto/${crypto}/settings`, 'POST', { betSize, minPrice });
-        showToast(`${crypto} settings saved (Bet: $${betSize}, Min: ${(minPrice * 100).toFixed(0)}¢)`, 'success');
-      } catch (error) {
-        showToast(`Failed to save ${crypto} config: ${error.message}`, 'error');
-      }
-    }
-    
-    // Update the toggle UI for a specific crypto
-    function updateCryptoToggle(crypto, enabled) {
-      const toggleId = `${crypto.toLowerCase()}BotToggle`;
-      const labelId = `${crypto.toLowerCase()}ToggleLabel`;
-      const toggle = document.getElementById(toggleId);
-      const label = document.getElementById(labelId);
-      
-      if (toggle) {
-        toggle.classList.toggle('active', enabled);
-      }
-      if (label) {
-        label.textContent = enabled ? `${crypto} Enabled` : `${crypto} Disabled`;
-      }
-    }
-    
-    // Fetch and display all crypto settings
     async function fetchAllCryptoSettings() {
       try {
         const { data } = await apiCall('/crypto/all-settings');
-        
-        // Update global toggle
-        updateBotState(data.globalEnabled);
-        
-        // Update each crypto's controls
-        for (const [crypto, settings] of Object.entries(data.cryptos)) {
-          const lowerCrypto = crypto.toLowerCase();
-          
-          // Update toggle
-          updateCryptoToggle(crypto, settings.enabled);
-          
-          // Update bet size input
-          const betSizeInput = document.getElementById(`${lowerCrypto}BetSizeInput`);
-          if (betSizeInput) {
-            betSizeInput.value = settings.betSize;
-          }
-          
-          // Update min price input (convert decimal to cents)
-          const minPriceInput = document.getElementById(`${lowerCrypto}MinPriceInput`);
-          if (minPriceInput) {
-            minPriceInput.value = Math.round(settings.minPrice * 100);
-          }
+        updateGlobalToggle(data.globalEnabled);
+        for (const [c, s] of Object.entries(data.cryptos)) {
+          document.getElementById(`${c.toLowerCase()}Toggle`).className = `toggle ${s.enabled ? 'on' : ''}`;
+          const bet = document.getElementById(`${c.toLowerCase()}BetSizeInput`);
+          const min = document.getElementById(`${c.toLowerCase()}MinPriceInput`);
+          if (bet) bet.value = s.betSize;
+          if (min) min.value = Math.round(s.minPrice * 100);
         }
-      } catch (error) {
-        console.error('Failed to fetch crypto settings:', error);
-      }
-    }
-    
-    // Fetch all crypto markets on load
-    async function fetchAllCryptoMarkets() {
-      try {
-        const { data, supportedCryptos } = await apiCall('/markets/live-all');
-        
-        // Update markets for each crypto
-        ['BTC', 'ETH', 'XRP', 'SOL'].forEach(crypto => {
-          if (data[crypto]) {
-            renderLiveMarkets(data[crypto], crypto);
-          }
-        });
-      } catch (error) {
-        console.error('Failed to fetch all crypto markets:', error);
-      }
+      } catch (e) { console.error(e); }
     }
 
-    // ============================================
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-      if (isConnected) fetchStats();
-    }, 30000);
+    async function fetchLiveMarkets() {
+      try {
+        const { data } = await apiCall('/markets/live');
+        renderMarkets(data, 'BTC');
+      } catch (e) { console.error(e); }
+    }
+
+    function renderMarkets(markets, crypto) {
+      const id = crypto === 'BTC' ? 'liveMarketsContainer' : `${crypto.toLowerCase()}MarketsContainer`;
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (!markets || !markets.length) {
+        el.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><p>No markets.</p></div>`;
+        return;
+      }
+      markets.sort((a, b) => b.isViable - a.isViable || a.hoursLeft - b.hoursLeft);
+      el.innerHTML = `<div class="markets-grid">${markets.map(m => `
+        <div class="market-card ${m.isViable ? 'viable' : ''}">
+          <div class="market-title" title="${m.title}">${m.title}</div>
+          <div class="market-prices">
+            <div class="price-box">
+              <div class="price-label">Up</div>
+              <div class="price-value up">${(m.upPrice * 100).toFixed(0)}¢</div>
+            </div>
+            <div class="price-box">
+              <div class="price-label">Down</div>
+              <div class="price-value down">${(m.downPrice * 100).toFixed(0)}¢</div>
+            </div>
+          </div>
+          <div class="market-footer">
+            <span class="mono">${(m.combinedCost * 100).toFixed(0)}¢</span>
+            <span>${m.hoursLeft.toFixed(1)}h</span>
+          </div>
+          ${m.isViable ? `<div style="margin-top: 12px;"><span class="viable-tag">Buy ${m.viableSide?.toUpperCase()}</span></div>` : ''}
+        </div>
+      `).join('')}</div>`;
+    }
+
+    function renderTrades(trades) {
+      const el = document.getElementById('tradesContainer');
+      if (!el) return;
+      if (!trades || !trades.length) {
+        el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>No trades.</p></div>`;
+        return;
+      }
+      el.innerHTML = `<div class="table-wrapper"><table class="table"><thead><tr><th>Market</th><th>Side</th><th>Price</th><th>Cost</th><th>Status</th><th>P&L</th><th>Time</th></tr></thead><tbody>${trades.map(t => {
+        const side = t.side || 'up';
+        const price = side === 'up' ? t.up_price : t.down_price;
+        return `<tr>
+          <td class="trade-market" title="${t.market_question || ''}">${t.market_question || '—'}</td>
+          <td class="trade-side ${side}">${side === 'up' ? '↑' : '↓'} ${side.toUpperCase()}</td>
+          <td class="mono">${price ? (price * 100).toFixed(0) + '¢' : '—'}</td>
+          <td class="mono">${t.combined_cost ? '$' + t.combined_cost.toFixed(0) : '—'}</td>
+          <td><span class="trade-status ${t.status || ''}">${t.status || '—'}</span></td>
+          <td class="mono">${t.pnl != null ? '$' + t.pnl.toFixed(0) : '—'}</td>
+          <td>${formatTime(t.created_at)}</td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
+
+    async function bulkClaimAllHourly() {
+      const days = parseInt(document.getElementById('claimDaysBack').value) || 7;
+      if (!confirm(`Claim all from last ${days} days?`)) return;
+      try {
+        await apiCall('/positions/claim-all-hourly', 'POST', { daysBack: days });
+        toast('Claim started');
+      } catch (e) { toast('Failed', true); }
+    }
+
+    async function manualClaimPosition() {
+      const id = document.getElementById('manualConditionId').value.trim();
+      const neg = document.getElementById('negRiskCheckbox').checked;
+      if (!id) { toast('Enter ID', true); return; }
+      try {
+        await apiCall(`/positions/claim/${encodeURIComponent(id)}`, 'POST', { negRisk: neg });
+        toast('Claim started');
+        document.getElementById('manualConditionId').value = '';
+      } catch (e) { toast('Failed', true); }
+    }
+
+    async function approveUsdc() {
+      try { await apiCall('/bot/approve', 'POST'); toast('Approval started'); } catch (e) { toast('Failed', true); }
+    }
+
+    async function approveSelling() {
+      try { await apiCall('/bot/approve-sell', 'POST'); toast('Approval started'); } catch (e) { toast('Failed', true); }
+    }
+
+    async function emergencyStop() {
+      if (!confirm('Stop bot?')) return;
+      try { await apiCall('/bot/stop', 'POST'); toast('Stopped'); fetchStats(); } catch (e) { toast('Failed', true); }
+    }
+
+    async function resetBot() {
+      if (!confirm('Clear history?')) return;
+      try { await apiCall('/bot/reset', 'POST'); toast('Reset'); fetchStats(); } catch (e) { toast('Failed', true); }
+    }
+
+    function exportTradesToCsv() {
+      const link = document.createElement('a');
+      link.href = `/api/trades/export?auth=${encodeURIComponent(password)}`;
+      link.download = `trades-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      toast('Export started');
+    }
+
+    async function fetchVolatilityConfig() {
+      try {
+        const { data } = await apiCall('/volatility/config');
+        volatilityConfig = data;
+        document.getElementById('volatileHoursToggle').className = `toggle ${data.skipVolatileHours ? 'on' : ''}`;
+        document.getElementById('realtimeToggle').className = `toggle ${data.checkRealTimeVolatility ? 'on' : ''}`;
+        document.getElementById('spreadToggle').className = `toggle ${data.checkSpread ? 'on' : ''}`;
+        document.getElementById('maxVolatilityInput').value = data.maxHourlyVolatilityPercent || 2.0;
+        document.getElementById('maxSpreadInput').value = data.maxSpreadCents || 5;
+      } catch (e) { console.error(e); }
+    }
+
+    function toggleSetting(key) {
+      const map = { volatileHours: 'skipVolatileHours', realtime: 'checkRealTimeVolatility', spread: 'checkSpread' };
+      const toggleId = { volatileHours: 'volatileHoursToggle', realtime: 'realtimeToggle', spread: 'spreadToggle' };
+      volatilityConfig[map[key]] = !volatilityConfig[map[key]];
+      document.getElementById(toggleId[key]).className = `toggle ${volatilityConfig[map[key]] ? 'on' : ''}`;
+    }
+
+    async function saveVolatilityConfig() {
+      try {
+        const cfg = {
+          skipVolatileHours: volatilityConfig.skipVolatileHours,
+          checkRealTimeVolatility: volatilityConfig.checkRealTimeVolatility,
+          checkSpread: volatilityConfig.checkSpread,
+          maxHourlyVolatilityPercent: parseFloat(document.getElementById('maxVolatilityInput').value),
+          maxSpreadCents: parseFloat(document.getElementById('maxSpreadInput').value),
+        };
+        await apiCall('/volatility/config', 'POST', cfg);
+        toast('Saved');
+      } catch (e) { toast('Failed', true); }
+    }
+
+    function formatTime(iso) {
+      const d = new Date(iso);
+      const diff = Math.floor((Date.now() - d) / 1000);
+      if (diff < 60) return `${diff}s`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+      return d.toLocaleDateString();
+    }
+
+    function toast(msg, error = false) {
+      const el = document.createElement('div');
+      el.className = `toast ${error ? 'error' : ''}`;
+      el.innerHTML = `${error ? '✕' : '✓'} ${msg}`;
+      document.getElementById('toastArea').appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+    }
+
+    setInterval(() => { if (isConnected) fetchStats(); }, 30000);
   </script>
 </body>
 </html>
-

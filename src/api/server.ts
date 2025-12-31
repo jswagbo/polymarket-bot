@@ -953,6 +953,45 @@ export function createServer(
     }
   });
 
+  // ==========================================
+  // VOLATILITY FILTER ENDPOINTS
+  // ==========================================
+
+  // Get volatility filter status and config
+  app.get('/api/volatility/config', (req: Request, res: Response) => {
+    try {
+      const config = scheduler.getVolatilityConfig();
+      res.json({ success: true, data: config });
+    } catch (error: any) {
+      logger.error('Failed to get volatility config', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to get config' });
+    }
+  });
+
+  // Update volatility filter config
+  app.post('/api/volatility/config', (req: Request, res: Response) => {
+    try {
+      const config = req.body;
+      scheduler.updateVolatilityConfig(config);
+      res.json({ success: true, data: scheduler.getVolatilityConfig() });
+    } catch (error: any) {
+      logger.error('Failed to update volatility config', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to update config' });
+    }
+  });
+
+  // Toggle volatility filter on/off
+  app.post('/api/volatility/toggle', (req: Request, res: Response) => {
+    try {
+      const { enabled } = req.body;
+      scheduler.setVolatilityFilterEnabled(enabled !== undefined ? enabled : true);
+      res.json({ success: true, data: { enabled } });
+    } catch (error: any) {
+      logger.error('Failed to toggle volatility filter', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to toggle' });
+    }
+  });
+
   // Serve dashboard for all other routes
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));

@@ -3,6 +3,7 @@ import { PolymarketClient, CryptoType, CRYPTO_DISPLAY_NAMES } from '../polymarke
 import { MarketScanner } from '../polymarket/markets';
 import { StraddleCalculator } from '../trading/straddle';
 import { TradeExecutor } from '../trading/executor';
+import { getVolatilityFilter, VolatilityFilter, VolatilityConfig } from '../trading/volatility';
 import { Database } from '../db/database';
 import { RuntimeConfig, CryptoType as ConfigCryptoType } from '../config';
 import { createLogger } from '../utils/logger';
@@ -44,7 +45,9 @@ export class TradingScheduler {
   private scanner: MarketScanner;
   private calculator: StraddleCalculator;
   private executor: TradeExecutor;
+  private volatilityFilter: VolatilityFilter;
   private autoClaimEnabled = true;
+  private volatilityFilterEnabled = true;
   
   // Trading window: only trade in last 15 minutes of hour (minutes 45-59)
   private tradingWindowStart = 45;  // Minute 45
@@ -61,6 +64,38 @@ export class TradingScheduler {
       maxCombinedCost: runtimeConfig.maxCombinedCost,
     });
     this.executor = new TradeExecutor(client, db);
+    this.volatilityFilter = getVolatilityFilter({
+      skipVolatileHours: true,
+      volatileHoursET: [9, 10, 15, 16],  // US market open/close
+      checkRealTimeVolatility: true,
+      maxHourlyVolatilityPercent: 2.0,
+      checkSpread: true,
+      maxSpreadCents: 5,
+      checkVolume: false,  // Disabled by default - market volume data not always available
+    });
+    logger.info('Volatility filter initialized with default settings');
+  }
+  
+  /**
+   * Enable or disable volatility filtering
+   */
+  setVolatilityFilterEnabled(enabled: boolean): void {
+    this.volatilityFilterEnabled = enabled;
+    logger.info(`Volatility filter ${enabled ? 'ENABLED' : 'DISABLED'}`);
+  }
+  
+  /**
+   * Update volatility filter configuration
+   */
+  updateVolatilityConfig(config: Partial<VolatilityConfig>): void {
+    this.volatilityFilter.updateConfig(config);
+  }
+  
+  /**
+   * Get current volatility filter config
+   */
+  getVolatilityConfig(): VolatilityConfig {
+    return this.volatilityFilter.getConfig();
   }
 
   /**
@@ -297,6 +332,28 @@ export class TradingScheduler {
             logger.info(`Found ${opportunities.length} ${crypto} opportunities with expensive side (≥${thresholdPct}¢)`);
             
             if (inTradingWindow) {
+              // Run volatility filter before executing trades
+              if (this.volatilityFilterEnabled) {
+                const quickCheck = this.volatilityFilter.quickCheck();
+                if (!quickCheck.canTrade) {
+                  logger.warn(`⚠️ Volatility filter BLOCKED ${crypto} trades: ${quickCheck.reason}`);
+                  continue;
+                }
+                
+                // Run full volatility check for first opportunity (representative)
+                const firstOpp = opportunities[0];
+                const tokenId = firstOpp.token?.token_id || '';
+                const volumeUsd = 0; // Volume check disabled by default
+                
+                const fullCheck = await this.volatilityFilter.checkAll(crypto, tokenId, volumeUsd);
+                if (!fullCheck.canTrade) {
+                  logger.warn(`⚠️ Volatility filter BLOCKED ${crypto} trades: ${fullCheck.reasons.join(', ')}`);
+                  continue;
+                }
+                
+                logger.info(`✅ Volatility filter PASSED for ${crypto}`);
+              }
+              
               logger.info(`✅ IN TRADING WINDOW - Executing ${crypto} trades...`);
               
               try {
