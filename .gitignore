@@ -33,3 +33,5 @@ Thumbs.db
 # TypeScript cache
 *.tsbuildinfo
 
+# Mise
+.mise.toml

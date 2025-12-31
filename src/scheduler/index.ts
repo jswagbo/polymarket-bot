@@ -16,6 +16,7 @@ export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH'];
 export interface LiveMarketData {
   eventId: string;
   title: string;
+  slug: string;
   upPrice: number;
   downPrice: number;
   combinedCost: number;
@@ -35,20 +36,20 @@ export class TradingScheduler {
   private lastScanTime: Date | null = null;
   private lastClaimTime: Date | null = null;
   private lastApiCallTime: Date | null = null;
-  
+
   // Minimum time between API calls to avoid rate limiting (5 seconds)
   private minScanIntervalMs = 5000;
-  
+
   // Store market data for each crypto separately
   private marketDataByCrypto: Map<CryptoType, LiveMarketData[]> = new Map();
-  
+
   private scanner: MarketScanner;
   private calculator: StraddleCalculator;
   private executor: TradeExecutor;
   private volatilityFilter: VolatilityFilter;
   private autoClaimEnabled = true;
   private volatilityFilterEnabled = true;
-  
+
   // Trading window: only trade in last 15 minutes of hour (minutes 45-59)
   private tradingWindowStart = 45;  // Minute 45
   private tradingWindowEnd = 59;    // Minute 59
@@ -75,7 +76,7 @@ export class TradingScheduler {
     });
     logger.info('Volatility filter initialized with default settings');
   }
-  
+
   /**
    * Enable or disable volatility filtering
    */
@@ -83,14 +84,14 @@ export class TradingScheduler {
     this.volatilityFilterEnabled = enabled;
     logger.info(`Volatility filter ${enabled ? 'ENABLED' : 'DISABLED'}`);
   }
-  
+
   /**
    * Update volatility filter configuration
    */
   updateVolatilityConfig(config: Partial<VolatilityConfig>): void {
     this.volatilityFilter.updateConfig(config);
   }
-  
+
   /**
    * Get current volatility filter config
    */
@@ -187,19 +188,19 @@ export class TradingScheduler {
       // and attempt to redeem each one. Markets where user has no position will be skipped.
       // This is the EXACT same workflow that works for manual claiming.
       const result = await this.client.claimAllResolvedHourly(7);
-      
+
       if (result.success > 0) {
         logger.info(`✅ AUTO-CLAIM COMPLETE: ${result.success} position(s) claimed!`);
       }
-      
+
       if (result.skipped > 0) {
         logger.info(`⏭️ Skipped ${result.skipped} markets (no position or already claimed)`);
       }
-      
+
       if (result.failed > 0) {
         logger.warn(`⚠️ ${result.failed} position(s) failed to claim`);
       }
-      
+
       logger.info(`Auto-claim summary: ${result.attempted} attempted, ${result.success} success, ${result.skipped} skipped, ${result.failed} failed`);
 
     } catch (error) {
@@ -253,7 +254,7 @@ export class TradingScheduler {
     // Check if global bot is enabled OR any individual crypto is enabled
     const globalEnabled = this.runtimeConfig.botEnabled;
     const anyCryptoEnabled = this.isAnyCryptoEnabled();
-    
+
     if (!globalEnabled && !anyCryptoEnabled) {
       // Skip silently to avoid log spam
       return;
@@ -291,9 +292,9 @@ export class TradingScheduler {
           const minPrice = cryptoSettings.minPrice;
           const betSize = cryptoSettings.betSize;
           const thresholdPct = (minPrice * 100).toFixed(0);
-          
+
           logger.info(`--- Scanning ${CRYPTO_DISPLAY_NAMES[crypto]} (${crypto}) | Toggle: ${isEnabled ? 'ON' : 'OFF'} | Threshold: ${thresholdPct}% | Bet: $${betSize} ---`);
-          
+
           // Fetch markets for this crypto (always fetch for dashboard display)
           const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(crypto);
           logger.info(`Found ${hourlyMarkets.length} hourly ${crypto} markets`);
@@ -304,6 +305,7 @@ export class TradingScheduler {
             return {
               eventId: market.eventId,
               title: market.title,
+              slug: market.slug,
               upPrice: analysis.upPrice,
               downPrice: analysis.downPrice,
               combinedCost: analysis.combinedCost,
@@ -330,7 +332,7 @@ export class TradingScheduler {
 
           if (opportunities.length > 0) {
             logger.info(`Found ${opportunities.length} ${crypto} opportunities with expensive side (≥${thresholdPct}¢)`);
-            
+
             if (inTradingWindow) {
               // Run volatility filter before executing trades
               if (this.volatilityFilterEnabled) {
@@ -339,27 +341,27 @@ export class TradingScheduler {
                   logger.warn(`⚠️ Volatility filter BLOCKED ${crypto} trades: ${quickCheck.reason}`);
                   continue;
                 }
-                
+
                 // Run full volatility check for first opportunity (representative)
                 const firstOpp = opportunities[0];
                 const tokenId = firstOpp.token?.token_id || '';
                 const volumeUsd = 0; // Volume check disabled by default
-                
+
                 const fullCheck = await this.volatilityFilter.checkAll(crypto, tokenId, volumeUsd);
                 if (!fullCheck.canTrade) {
                   logger.warn(`⚠️ Volatility filter BLOCKED ${crypto} trades: ${fullCheck.reasons.join(', ')}`);
                   continue;
                 }
-                
+
                 logger.info(`✅ Volatility filter PASSED for ${crypto}`);
               }
-              
+
               logger.info(`✅ IN TRADING WINDOW - Executing ${crypto} trades...`);
-              
+
               try {
                 const trades = await this.executor.executeSingleLegTrades(opportunities);
                 totalTradesExecuted += trades.length;
-                
+
                 if (trades.length > 0) {
                   trades.forEach(trade => {
                     logger.info(`Trade ${trade.id}: ${trade.market_question} (${trade.side?.toUpperCase()}) - Status: ${trade.status}`);
@@ -410,7 +412,7 @@ export class TradingScheduler {
     this.isRunning = true;
     this.lastScanTime = new Date();
     logger.info(`Force scan starting, isRunning=${this.isRunning}`);
-    
+
     const cryptosToScan = crypto ? [crypto] : SUPPORTED_CRYPTOS;
     logger.info(`Starting forced scan for: ${cryptosToScan.join(', ')}...`);
 
@@ -427,12 +429,12 @@ export class TradingScheduler {
           const isEnabled = cryptoSettings.enabled;
           const minPrice = cryptoSettings.minPrice;
           const betSize = cryptoSettings.betSize;
-          
+
           logger.info(`Force scan ${c}: enabled=${isEnabled}, threshold=${(minPrice*100).toFixed(0)}%, bet=$${betSize}`);
-          
+
           // Scan hourly markets for this crypto
           const hourlyMarkets = await this.scanner.scanHourlyCryptoMarkets(c);
-          
+
           // Store live market data for dashboard (use per-crypto threshold)
           const marketData: LiveMarketData[] = hourlyMarkets.map(market => {
             const analysis = this.calculator.analyzeHourlyMarket(market, minPrice, betSize);
@@ -456,7 +458,7 @@ export class TradingScheduler {
           // Find single-leg opportunities (≥ per-crypto threshold)
           const opportunities = this.calculator.findSingleLegOpportunities(hourlyMarkets, minPrice, betSize);
           totalOpportunities += opportunities.length;
-          
+
           // Only execute trades if:
           // 1. This specific crypto toggle is ON
           // 2. Currently in trading window (minutes 45-59)
