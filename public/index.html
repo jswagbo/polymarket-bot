@@ -885,6 +885,7 @@
 
     <!-- Settings Panel -->
     <div id="settings-panel" class="panel">
+      <!-- Global Controls -->
       <div class="card">
         <h2 class="card-title">Global</h2>
         <div class="form-row">
@@ -892,54 +893,83 @@
             <div class="form-label">Master Enable</div>
             <div class="form-sublabel">Global on/off for all trading</div>
           </div>
-          <div id="globalToggle" class="toggle" onclick="toggleBot()"></div>
+          <div id="globalToggle" class="toggle" onclick="toggleGlobal()"></div>
         </div>
         <div class="btn-row">
           <button class="btn btn-secondary" id="approveBtn">Approve USDC</button>
           <button class="btn btn-secondary" id="approveSellBtn">Approve Selling</button>
-          <button class="btn btn-secondary" id="resetBtn">Reset</button>
-          <button class="btn btn-danger" id="emergencyStopBtn">Stop</button>
+          <button class="btn btn-danger" id="emergencyStopBtn">Emergency Stop</button>
         </div>
       </div>
 
+      <!-- Trading Defaults -->
       <div class="card">
-        <h2 class="card-title">Volatility Filter</h2>
+        <h2 class="card-title">Trading Defaults</h2>
+        
+        <!-- BTC -->
         <div class="form-row">
           <div>
-            <div class="form-label">Skip Volatile Hours</div>
-            <div class="form-sublabel">Avoid 9-10 AM, 3-4 PM ET</div>
+            <div class="form-label">₿ Bitcoin</div>
+            <div class="form-sublabel">Enable BTC trading on startup</div>
           </div>
-          <div id="volatileHoursToggle" class="toggle on" onclick="toggleSetting('volatileHours')"></div>
+          <div id="settingsBtcToggle" class="toggle on"></div>
         </div>
-        <div class="form-row">
-          <div>
-            <div class="form-label">Check Real-time Volatility</div>
-            <div class="form-sublabel">Binance price swing detection</div>
-          </div>
-          <div id="realtimeToggle" class="toggle on" onclick="toggleSetting('realtime')"></div>
-        </div>
-        <div class="form-row">
-          <div>
-            <div class="form-label">Check Spread</div>
-            <div class="form-sublabel">Skip wide bid-ask spreads</div>
-          </div>
-          <div id="spreadToggle" class="toggle on" onclick="toggleSetting('spread')"></div>
-        </div>
-        <div class="volatility-grid">
+        <div class="input-row">
           <div class="field">
-            <label class="field-label">Max Volatility (%)</label>
-            <input type="number" id="maxVolatilityInput" class="field-input" value="2.0" step="0.5">
+            <label class="field-label">BTC Bet Size ($)</label>
+            <input type="number" id="settingsBtcBetSize" class="field-input" value="90" min="1">
           </div>
           <div class="field">
-            <label class="field-label">Max Spread (¢)</label>
-            <input type="number" id="maxSpreadInput" class="field-input" value="5" step="1">
+            <label class="field-label">BTC Min Price (¢)</label>
+            <input type="number" id="settingsBtcMinPrice" class="field-input" value="90" min="50" max="99">
+          </div>
+          <div class="field">
+            <label class="field-label">BTC Max Price (¢)</label>
+            <input type="number" id="settingsBtcMaxPrice" class="field-input" value="94" min="50" max="99">
           </div>
         </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="saveVolatilityConfig()">Save Settings</button>
+        
+        <!-- ETH -->
+        <div class="form-row" style="margin-top: 16px;">
+          <div>
+            <div class="form-label">Ξ Ethereum</div>
+            <div class="form-sublabel">Enable ETH trading on startup</div>
+          </div>
+          <div id="settingsEthToggle" class="toggle"></div>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">ETH Bet Size ($)</label>
+            <input type="number" id="settingsEthBetSize" class="field-input" value="90" min="1">
+          </div>
+          <div class="field">
+            <label class="field-label">ETH Min Price (¢)</label>
+            <input type="number" id="settingsEthMinPrice" class="field-input" value="90" min="50" max="99">
+          </div>
+          <div class="field">
+            <label class="field-label">ETH Max Price (¢)</label>
+            <input type="number" id="settingsEthMaxPrice" class="field-input" value="94" min="50" max="99">
+          </div>
         </div>
       </div>
 
+      <!-- Trading Window -->
+      <div class="card">
+        <h2 class="card-title">Trading Window</h2>
+        <div class="form-sublabel" style="margin-bottom: 16px;">Only execute trades during these minutes of each hour</div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Start Minute (0-59)</label>
+            <input type="number" id="settingsWindowStart" class="field-input" value="45" min="0" max="59">
+          </div>
+          <div class="field">
+            <label class="field-label">End Minute (0-59)</label>
+            <input type="number" id="settingsWindowEnd" class="field-input" value="59" min="0" max="59">
+          </div>
+        </div>
+      </div>
+
+      <!-- Stop-Loss -->
       <div class="card">
         <h2 class="card-title">Stop-Loss</h2>
         <div class="form-row">
@@ -947,17 +977,130 @@
             <div class="form-label">Enable Stop-Loss</div>
             <div class="form-sublabel">Auto-sell when price drops below threshold</div>
           </div>
-          <div id="stopLossToggle" class="toggle" onclick="toggleStopLoss()"></div>
+          <div id="settingsStopLossToggle" class="toggle on"></div>
         </div>
         <div class="input-row">
           <div class="field">
-            <label class="field-label">Stop-Loss Threshold (¢)</label>
-            <input type="number" id="stopLossThresholdInput" class="field-input" value="70" min="10" max="90" step="5">
+            <label class="field-label">Threshold (¢)</label>
+            <input type="number" id="settingsStopLossThreshold" class="field-input" value="70" min="10" max="90" step="5">
           </div>
         </div>
         <div class="btn-row">
-          <button class="btn btn-secondary" onclick="saveStopLossConfig()">Save</button>
           <button class="btn btn-danger" onclick="triggerStopLossCheck()">Check Now</button>
+        </div>
+      </div>
+
+      <!-- Auto-Claim -->
+      <div class="card">
+        <h2 class="card-title">Auto-Claim</h2>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Enable Auto-Claim</div>
+            <div class="form-sublabel">Automatically claim resolved positions</div>
+          </div>
+          <div id="settingsAutoClaimToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">BTC Auto-Claim</div>
+            <div class="form-sublabel">Claim BTC market winnings</div>
+          </div>
+          <div id="settingsBtcClaimToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">ETH Auto-Claim</div>
+            <div class="form-sublabel">Claim ETH market winnings</div>
+          </div>
+          <div id="settingsEthClaimToggle" class="toggle"></div>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Check Interval (minutes)</label>
+            <input type="number" id="settingsClaimInterval" class="field-input" value="60" min="5" max="1440">
+          </div>
+          <div class="field">
+            <label class="field-label">Days Back</label>
+            <input type="number" id="settingsClaimDays" class="field-input" value="7" min="1" max="30">
+          </div>
+        </div>
+      </div>
+
+      <!-- Volatility Filter -->
+      <div class="card">
+        <h2 class="card-title">Volatility Filter</h2>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Enable Volatility Filter</div>
+            <div class="form-sublabel">Skip trades during volatile conditions</div>
+          </div>
+          <div id="settingsVolatilityToggle" class="toggle"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Skip Volatile Hours</div>
+            <div class="form-sublabel">Avoid 9-10 AM, 3-4 PM ET</div>
+          </div>
+          <div id="settingsVolatileHoursToggle" class="toggle"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Check Real-time Volatility</div>
+            <div class="form-sublabel">Binance price swing detection</div>
+          </div>
+          <div id="settingsRealtimeToggle" class="toggle"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Check Spread</div>
+            <div class="form-sublabel">Skip wide bid-ask spreads</div>
+          </div>
+          <div id="settingsSpreadToggle" class="toggle"></div>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Max Volatility (%)</label>
+            <input type="number" id="settingsMaxVolatility" class="field-input" value="2.0" step="0.5" min="0.5" max="10">
+          </div>
+          <div class="field">
+            <label class="field-label">Max Spread (¢)</label>
+            <input type="number" id="settingsMaxSpread" class="field-input" value="5" step="1" min="1" max="20">
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced -->
+      <div class="card">
+        <h2 class="card-title">Advanced</h2>
+        <div class="input-row">
+          <div class="field">
+            <label class="field-label">Scan Interval (seconds)</label>
+            <input type="number" id="settingsScanInterval" class="field-input" value="5" min="1" max="60">
+          </div>
+          <div class="field">
+            <label class="field-label">Gas Speed</label>
+            <select id="settingsGasSpeed" class="field-input" style="font-family: inherit;">
+              <option value="safeLow">Slow (cheaper)</option>
+              <option value="standard" selected>Standard</option>
+              <option value="fast">Fast (expensive)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-top: 16px;">
+          <label class="field-label">Custom RPC URL (leave empty for default)</label>
+          <input type="text" id="settingsRpcUrl" class="field-input" placeholder="https://polygon-rpc.com" style="font-size: 14px;">
+        </div>
+      </div>
+
+      <!-- Save / Reset / Export -->
+      <div class="card">
+        <h2 class="card-title">Save & Export</h2>
+        <div class="btn-row" style="flex-wrap: wrap; gap: 12px;">
+          <button class="btn btn-primary" onclick="saveAllSettings()">Save All Settings</button>
+          <button class="btn btn-secondary" onclick="resetToFactory()">Reset to Factory</button>
+          <button class="btn btn-secondary" onclick="exportSettings()">Export JSON</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Import JSON</button>
+          <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importSettings(event)">
         </div>
       </div>
     </div>
@@ -969,8 +1112,7 @@
   <script>
     let password = localStorage.getItem('botPassword') || '';
     let isConnected = false;
-    let volatilityConfig = { skipVolatileHours: true, checkRealTimeVolatility: true, checkSpread: true };
-    let stopLossConfig = { enabled: false, threshold: 0.70 };
+    let allSettings = null; // Will hold all settings from API
 
     const passwordInput = document.getElementById('passwordInput');
     passwordInput.value = password;
@@ -1034,8 +1176,7 @@
         updateDashboard(data);
         fetchAllCryptoMarkets();
         fetchAllCryptoSettings();
-        fetchVolatilityConfig();
-        fetchStopLossConfig();
+        fetchAllSettings();
       } catch (e) { console.error(e); }
     }
 
@@ -1257,37 +1398,204 @@
       toast('Export started');
     }
 
-    async function fetchVolatilityConfig() {
+    // ==========================================
+    // UNIFIED SETTINGS FUNCTIONS
+    // ==========================================
+    
+    async function fetchAllSettings() {
       try {
-        const { data } = await apiCall('/volatility/config');
-        volatilityConfig = data;
-        document.getElementById('volatileHoursToggle').className = `toggle ${data.skipVolatileHours ? 'on' : ''}`;
-        document.getElementById('realtimeToggle').className = `toggle ${data.checkRealTimeVolatility ? 'on' : ''}`;
-        document.getElementById('spreadToggle').className = `toggle ${data.checkSpread ? 'on' : ''}`;
-        document.getElementById('maxVolatilityInput').value = data.maxHourlyVolatilityPercent || 2.0;
-        document.getElementById('maxSpreadInput').value = data.maxSpreadCents || 5;
+        const { data } = await apiCall('/settings');
+        allSettings = data;
+        applySettingsToUI(data);
+      } catch (e) { console.error('Failed to fetch settings:', e); }
+    }
+    
+    function applySettingsToUI(s) {
+      if (!s) return;
+      
+      // Global
+      setToggle('globalToggle', s.globalBotEnabled);
+      
+      // BTC
+      setToggle('settingsBtcToggle', s.btc.enabled);
+      setValue('settingsBtcBetSize', s.btc.betSize);
+      setValue('settingsBtcMinPrice', Math.round(s.btc.minPrice * 100));
+      setValue('settingsBtcMaxPrice', Math.round(s.btc.maxPrice * 100));
+      setToggle('settingsBtcClaimToggle', s.btc.autoClaimEnabled);
+      
+      // ETH
+      setToggle('settingsEthToggle', s.eth.enabled);
+      setValue('settingsEthBetSize', s.eth.betSize);
+      setValue('settingsEthMinPrice', Math.round(s.eth.minPrice * 100));
+      setValue('settingsEthMaxPrice', Math.round(s.eth.maxPrice * 100));
+      setToggle('settingsEthClaimToggle', s.eth.autoClaimEnabled);
+      
+      // Trading Window
+      setValue('settingsWindowStart', s.tradingWindow.startMinute);
+      setValue('settingsWindowEnd', s.tradingWindow.endMinute);
+      
+      // Stop-Loss
+      setToggle('settingsStopLossToggle', s.stopLoss.enabled);
+      setValue('settingsStopLossThreshold', Math.round(s.stopLoss.threshold * 100));
+      
+      // Auto-Claim
+      setToggle('settingsAutoClaimToggle', s.autoClaim.enabled);
+      setValue('settingsClaimInterval', s.autoClaim.intervalMinutes);
+      setValue('settingsClaimDays', s.autoClaim.daysBack);
+      
+      // Volatility
+      setToggle('settingsVolatilityToggle', s.volatility.enabled);
+      setToggle('settingsVolatileHoursToggle', s.volatility.skipVolatileHours);
+      setToggle('settingsRealtimeToggle', s.volatility.checkRealTimeVolatility);
+      setToggle('settingsSpreadToggle', s.volatility.checkSpread);
+      setValue('settingsMaxVolatility', s.volatility.maxHourlyVolatilityPercent);
+      setValue('settingsMaxSpread', s.volatility.maxSpreadCents);
+      
+      // Advanced
+      setValue('settingsScanInterval', s.advanced.scanIntervalSeconds);
+      setValue('settingsGasSpeed', s.advanced.gas.speed);
+      setValue('settingsRpcUrl', s.advanced.rpcUrl || '');
+    }
+    
+    function setToggle(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.className = `toggle ${value ? 'on' : ''}`;
+    }
+    
+    function setValue(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    }
+    
+    function getToggle(id) {
+      const el = document.getElementById(id);
+      return el ? el.classList.contains('on') : false;
+    }
+    
+    function getValue(id, isNumber = true) {
+      const el = document.getElementById(id);
+      if (!el) return isNumber ? 0 : '';
+      return isNumber ? parseFloat(el.value) || 0 : el.value;
+    }
+    
+    // Toggle handlers for settings page
+    function setupSettingsToggles() {
+      const toggleIds = [
+        'settingsBtcToggle', 'settingsEthToggle', 
+        'settingsBtcClaimToggle', 'settingsEthClaimToggle',
+        'settingsStopLossToggle', 'settingsAutoClaimToggle',
+        'settingsVolatilityToggle', 'settingsVolatileHoursToggle',
+        'settingsRealtimeToggle', 'settingsSpreadToggle'
+      ];
+      toggleIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.onclick = () => el.classList.toggle('on');
+      });
+    }
+    setupSettingsToggles();
+    
+    async function toggleGlobal() {
+      const el = document.getElementById('globalToggle');
+      el.classList.toggle('on');
+      // Also update via old API for immediate effect
+      try {
+        await apiCall('/bot/toggle', 'POST');
       } catch (e) { console.error(e); }
     }
-
-    function toggleSetting(key) {
-      const map = { volatileHours: 'skipVolatileHours', realtime: 'checkRealTimeVolatility', spread: 'checkSpread' };
-      const toggleId = { volatileHours: 'volatileHoursToggle', realtime: 'realtimeToggle', spread: 'spreadToggle' };
-      volatilityConfig[map[key]] = !volatilityConfig[map[key]];
-      document.getElementById(toggleId[key]).className = `toggle ${volatilityConfig[map[key]] ? 'on' : ''}`;
+    
+    function gatherSettingsFromUI() {
+      return {
+        globalBotEnabled: getToggle('globalToggle'),
+        btc: {
+          enabled: getToggle('settingsBtcToggle'),
+          betSize: getValue('settingsBtcBetSize'),
+          minPrice: getValue('settingsBtcMinPrice') / 100,
+          maxPrice: getValue('settingsBtcMaxPrice') / 100,
+          autoClaimEnabled: getToggle('settingsBtcClaimToggle'),
+        },
+        eth: {
+          enabled: getToggle('settingsEthToggle'),
+          betSize: getValue('settingsEthBetSize'),
+          minPrice: getValue('settingsEthMinPrice') / 100,
+          maxPrice: getValue('settingsEthMaxPrice') / 100,
+          autoClaimEnabled: getToggle('settingsEthClaimToggle'),
+        },
+        tradingWindow: {
+          startMinute: getValue('settingsWindowStart'),
+          endMinute: getValue('settingsWindowEnd'),
+        },
+        stopLoss: {
+          enabled: getToggle('settingsStopLossToggle'),
+          threshold: getValue('settingsStopLossThreshold') / 100,
+        },
+        autoClaim: {
+          enabled: getToggle('settingsAutoClaimToggle'),
+          intervalMinutes: getValue('settingsClaimInterval'),
+          daysBack: getValue('settingsClaimDays'),
+        },
+        volatility: {
+          enabled: getToggle('settingsVolatilityToggle'),
+          skipVolatileHours: getToggle('settingsVolatileHoursToggle'),
+          checkRealTimeVolatility: getToggle('settingsRealtimeToggle'),
+          checkSpread: getToggle('settingsSpreadToggle'),
+          maxHourlyVolatilityPercent: getValue('settingsMaxVolatility'),
+          maxSpreadCents: getValue('settingsMaxSpread'),
+        },
+        advanced: {
+          scanIntervalSeconds: getValue('settingsScanInterval'),
+          rpcUrl: getValue('settingsRpcUrl', false),
+          gas: {
+            speed: getValue('settingsGasSpeed', false),
+          },
+        },
+      };
     }
-
-    async function saveVolatilityConfig() {
+    
+    async function saveAllSettings() {
       try {
-        const cfg = {
-          skipVolatileHours: volatilityConfig.skipVolatileHours,
-          checkRealTimeVolatility: volatilityConfig.checkRealTimeVolatility,
-          checkSpread: volatilityConfig.checkSpread,
-          maxHourlyVolatilityPercent: parseFloat(document.getElementById('maxVolatilityInput').value),
-          maxSpreadCents: parseFloat(document.getElementById('maxSpreadInput').value),
-        };
-        await apiCall('/volatility/config', 'POST', cfg);
-        toast('Saved');
-      } catch (e) { toast('Failed', true); }
+        const settings = gatherSettingsFromUI();
+        await apiCall('/settings', 'POST', settings);
+        toast('All settings saved!');
+        fetchAllSettings();
+      } catch (e) { toast('Failed to save', true); }
+    }
+    
+    async function resetToFactory() {
+      if (!confirm('Reset ALL settings to factory defaults?')) return;
+      try {
+        const { data } = await apiCall('/settings/reset', 'POST');
+        allSettings = data;
+        applySettingsToUI(data);
+        toast('Reset to factory defaults');
+      } catch (e) { toast('Reset failed', true); }
+    }
+    
+    function exportSettings() {
+      const link = document.createElement('a');
+      link.href = `/api/settings/export?auth=${encodeURIComponent(password)}`;
+      link.download = 'polymarket-bot-settings.json';
+      link.click();
+      toast('Settings exported');
+    }
+    
+    async function importSettings(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const json = e.target.result;
+          const { data } = await apiCall('/settings/import', 'POST', JSON.parse(json));
+          allSettings = data;
+          applySettingsToUI(data);
+          toast('Settings imported!');
+        } catch (err) {
+          toast('Import failed: invalid file', true);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset file input
     }
 
     function formatTime(iso) {
@@ -1307,36 +1615,7 @@
       setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
     }
 
-    // Stop-Loss Functions
-    async function fetchStopLossConfig() {
-      try {
-        const { data } = await apiCall('/stoploss/config');
-        stopLossConfig = data;
-        document.getElementById('stopLossToggle').className = `toggle ${data.enabled ? 'on' : ''}`;
-        document.getElementById('stopLossThresholdInput').value = Math.round(data.threshold * 100);
-      } catch (e) { console.error(e); }
-    }
-
-    async function toggleStopLoss() {
-      try {
-        const toggle = document.getElementById('stopLossToggle');
-        const enabled = !toggle.classList.contains('on');
-        const { data } = await apiCall('/stoploss/toggle', 'POST', { enabled });
-        stopLossConfig = data;
-        toggle.className = `toggle ${data.enabled ? 'on' : ''}`;
-        toast(`Stop-loss ${data.enabled ? 'enabled' : 'disabled'}`);
-      } catch (e) { toast('Failed', true); }
-    }
-
-    async function saveStopLossConfig() {
-      try {
-        const threshold = parseInt(document.getElementById('stopLossThresholdInput').value);
-        const { data } = await apiCall('/stoploss/config', 'POST', { threshold });
-        stopLossConfig = data;
-        toast(`Stop-loss threshold set to ${Math.round(data.threshold * 100)}¢`);
-      } catch (e) { toast('Failed to save', true); }
-    }
-
+    // Stop-Loss Check (manual trigger)
     async function triggerStopLossCheck() {
       try {
         toast('Checking positions...');

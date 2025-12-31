@@ -6,11 +6,12 @@ import { TradeExecutor } from '../trading/executor';
 import { getVolatilityFilter, VolatilityFilter, VolatilityConfig } from '../trading/volatility';
 import { Database } from '../db/database';
 import { RuntimeConfig, CryptoType as ConfigCryptoType } from '../config';
+import { getSettingsManager, BotSettings } from '../settings';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('Scheduler');
 
-// Supported crypto types for the configurable strategy (BTC and ETH only)
+// Supported crypto types for the configurable strategy
 export const SUPPORTED_CRYPTOS: CryptoType[] = ['BTC', 'ETH'];
 
 export interface LiveMarketData {
@@ -71,16 +72,119 @@ export class TradingScheduler {
       maxCombinedCost: runtimeConfig.maxCombinedCost,
     });
     this.executor = new TradeExecutor(client, db);
+    
+    // Initialize volatility filter with defaults (will be overridden by settings)
     this.volatilityFilter = getVolatilityFilter({
-      skipVolatileHours: true,
-      volatileHoursET: [9, 10, 15, 16],  // US market open/close
-      checkRealTimeVolatility: true,
+      skipVolatileHours: false,
+      volatileHoursET: [9, 10, 15, 16],
+      checkRealTimeVolatility: false,
       maxHourlyVolatilityPercent: 2.0,
-      checkSpread: true,
+      checkSpread: false,
       maxSpreadCents: 5,
-      checkVolume: false,  // Disabled by default - market volume data not always available
+      checkVolume: false,
     });
-    logger.info('Volatility filter initialized with default settings');
+    
+    // Apply saved settings on startup
+    this.applySettingsFromManager();
+    
+    // Subscribe to settings changes
+    const settingsManager = getSettingsManager();
+    settingsManager.onChange((settings) => {
+      logger.info('Settings changed, applying updates...');
+      this.applySettings(settings);
+    });
+    
+    logger.info('Scheduler initialized with saved settings');
+  }
+  
+  /**
+   * Apply settings from the settings manager
+   */
+  private applySettingsFromManager(): void {
+    const settingsManager = getSettingsManager();
+    const settings = settingsManager.getAll();
+    this.applySettings(settings);
+  }
+  
+  /**
+   * Apply settings to the scheduler
+   */
+  applySettings(settings: BotSettings): void {
+    // Trading window
+    this.tradingWindowStart = settings.tradingWindow.startMinute;
+    this.tradingWindowEnd = settings.tradingWindow.endMinute;
+    logger.info(`Trading window: ${this.tradingWindowStart}-${this.tradingWindowEnd}`);
+    
+    // Volatility settings
+    this.volatilityFilterEnabled = settings.volatility.enabled;
+    this.volatilityFilter.updateConfig({
+      skipVolatileHours: settings.volatility.skipVolatileHours,
+      volatileHoursET: settings.volatility.volatileHoursET,
+      checkRealTimeVolatility: settings.volatility.checkRealTimeVolatility,
+      maxHourlyVolatilityPercent: settings.volatility.maxHourlyVolatilityPercent,
+      checkSpread: settings.volatility.checkSpread,
+      maxSpreadCents: settings.volatility.maxSpreadCents,
+    });
+    
+    // Stop-loss settings
+    this.stopLossThreshold = settings.stopLoss.threshold;
+    if (settings.stopLoss.enabled !== this.stopLossEnabled) {
+      this.setStopLossEnabled(settings.stopLoss.enabled);
+    }
+    
+    // Auto-claim settings
+    this.autoClaimEnabled = settings.autoClaim.enabled;
+    
+    // Update runtime config with crypto settings
+    this.runtimeConfig.botEnabled = settings.globalBotEnabled;
+    
+    // Apply per-crypto settings (BTC and ETH only for now)
+    const cryptoMap: Record<string, 'BTC' | 'ETH'> = { btc: 'BTC', eth: 'ETH' };
+    for (const [key, crypto] of Object.entries(cryptoMap)) {
+      const cryptoSettings = settings[key as keyof Pick<BotSettings, 'btc' | 'eth'>];
+      this.runtimeConfig.updateCryptoSettings(crypto, {
+        enabled: cryptoSettings.enabled,
+        betSize: cryptoSettings.betSize,
+        minPrice: cryptoSettings.minPrice,
+      });
+    }
+    
+    logger.info('Settings applied successfully');
+  }
+  
+  /**
+   * Get all current settings (for API)
+   */
+  getAllSettings(): BotSettings {
+    return getSettingsManager().getAll();
+  }
+  
+  /**
+   * Update settings (for API)
+   */
+  updateSettings(updates: Partial<BotSettings>): BotSettings {
+    return getSettingsManager().update(updates);
+  }
+  
+  /**
+   * Reset to factory defaults (for API)
+   */
+  resetToFactory(): BotSettings {
+    return getSettingsManager().resetToFactory();
+  }
+  
+  /**
+   * Export settings as JSON (for API)
+   */
+  exportSettings(): string {
+    return getSettingsManager().export();
+  }
+  
+  /**
+   * Import settings from JSON (for API)
+   */
+  importSettings(json: string): BotSettings {
+    return getSettingsManager().import(json);
   }
   
   /**

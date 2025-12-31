@@ -1052,6 +1052,69 @@ export function createServer(
     }
   });
 
+  // ==========================================
+  // UNIFIED SETTINGS ENDPOINTS
+  // ==========================================
+
+  // Get all settings
+  app.get('/api/settings', (req: Request, res: Response) => {
+    try {
+      const settings = scheduler.getAllSettings();
+      res.json({ success: true, data: settings });
+    } catch (error: any) {
+      logger.error('Failed to get settings', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to get settings' });
+    }
+  });
+
+  // Update settings (partial)
+  app.post('/api/settings', (req: Request, res: Response) => {
+    try {
+      const updates = req.body;
+      const settings = scheduler.updateSettings(updates);
+      res.json({ success: true, data: settings });
+    } catch (error: any) {
+      logger.error('Failed to update settings', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to update settings' });
+    }
+  });
+
+  // Reset to factory defaults
+  app.post('/api/settings/reset', (req: Request, res: Response) => {
+    try {
+      const settings = scheduler.resetToFactory();
+      res.json({ success: true, data: settings });
+    } catch (error: any) {
+      logger.error('Failed to reset settings', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to reset' });
+    }
+  });
+
+  // Export settings as JSON
+  app.get('/api/settings/export', (req: Request, res: Response) => {
+    try {
+      const json = scheduler.exportSettings();
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=polymarket-bot-settings.json');
+      res.send(json);
+    } catch (error: any) {
+      logger.error('Failed to export settings', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to export' });
+    }
+  });
+
+  // Import settings from JSON
+  app.post('/api/settings/import', (req: Request, res: Response) => {
+    try {
+      const json = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      const settings = scheduler.importSettings(json);
+      res.json({ success: true, data: settings });
+    } catch (error: any) {
+      logger.error('Failed to import settings', error);
+      res.status(500).json({ success: false, error: error.message || 'Invalid settings format' });
+    }
+  });
+
   // Serve dashboard for all other routes
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));
