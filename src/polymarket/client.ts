@@ -1422,7 +1422,7 @@ export class PolymarketClient {
       'BTC': '10114',  // BTC Up or Down Hourly
       'ETH': '10117',  // ETH Up or Down Hourly
       'SOL': '10122',  // SOL Up or Down Hourly
-      'XRP': '10100',  // XRP Up or Down Daily (resolves at 12PM ET)
+      'XRP': '10123',  // XRP Up or Down Hourly
     };
     
     const allMarkets: any[] = [];
