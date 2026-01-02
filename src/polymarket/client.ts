@@ -1455,7 +1455,13 @@ export class PolymarketClient {
           // Skip events that don't match this crypto
           const title = (event.title || '').toLowerCase();
           const cryptoLower = crypto.toLowerCase();
-          const cryptoName = crypto === 'BTC' ? 'bitcoin' : crypto === 'ETH' ? 'ethereum' : 'solana';
+          const cryptoNameMap: Record<string, string> = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum', 
+            'SOL': 'solana',
+            'XRP': 'xrp',
+          };
+          const cryptoName = cryptoNameMap[crypto] || cryptoLower;
           
           if (!title.includes(cryptoLower) && !title.includes(cryptoName)) {
             continue;
@@ -1509,11 +1515,21 @@ export class PolymarketClient {
   /**
    * Attempt to claim all resolved hourly crypto positions (brute force)
    * This tries to redeem every resolved market - if you don't have a position, it will fail gracefully
+   * @param daysBack - Number of days to look back for resolved markets
+   * @param enabledCryptos - Optional array of cryptos to claim (e.g., ['BTC', 'ETH']). If not provided, claims all.
    */
-  async claimAllResolvedHourly(daysBack: number = 7): Promise<{ attempted: number; success: number; failed: number; skipped: number }> {
-    logger.info(`=== CLAIMING ALL RESOLVED HOURLY MARKETS (last ${daysBack} days) ===`);
+  async claimAllResolvedHourly(daysBack: number = 7, enabledCryptos?: string[]): Promise<{ attempted: number; success: number; failed: number; skipped: number }> {
+    const cryptoFilter = enabledCryptos?.length ? enabledCryptos.join(', ') : 'ALL';
+    logger.info(`=== CLAIMING RESOLVED HOURLY MARKETS (last ${daysBack} days, cryptos: ${cryptoFilter}) ===`);
     
-    const resolvedMarkets = await this.getResolvedHourlyMarkets(daysBack);
+    let resolvedMarkets = await this.getResolvedHourlyMarkets(daysBack);
+    
+    // Filter by enabled cryptos if specified
+    if (enabledCryptos && enabledCryptos.length > 0) {
+      const enabledSet = new Set(enabledCryptos.map(c => c.toUpperCase()));
+      resolvedMarkets = resolvedMarkets.filter(m => enabledSet.has(m.crypto?.toUpperCase()));
+      logger.info(`Filtered to ${resolvedMarkets.length} markets for enabled cryptos: ${enabledCryptos.join(', ')}`);
+    }
     
     if (resolvedMarkets.length === 0) {
       logger.info('No resolved markets found');

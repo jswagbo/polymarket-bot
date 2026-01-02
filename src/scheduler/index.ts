@@ -453,10 +453,27 @@ export class TradingScheduler {
     logger.info('=== STARTING AUTO-CLAIM (BRUTE FORCE APPROACH) ===');
 
     try {
+      // Get enabled cryptos from settings
+      const settings = getSettingsManager().getAll();
+      const enabledCryptos: string[] = [];
+      
+      if (settings.btc.autoClaimEnabled) enabledCryptos.push('BTC');
+      if (settings.eth.autoClaimEnabled) enabledCryptos.push('ETH');
+      if (settings.sol.autoClaimEnabled) enabledCryptos.push('SOL');
+      if (settings.xrp.autoClaimEnabled) enabledCryptos.push('XRP');
+      
+      if (enabledCryptos.length === 0) {
+        logger.info('No cryptos enabled for auto-claim, skipping...');
+        this.isClaimRunning = false;
+        return;
+      }
+      
+      logger.info(`Auto-claiming for: ${enabledCryptos.join(', ')}`);
+      
       // Use brute-force approach: scan all resolved hourly markets from last 7 days
       // and attempt to redeem each one. Markets where user has no position will be skipped.
       // This is the EXACT same workflow that works for manual claiming.
-      const result = await this.client.claimAllResolvedHourly(7);
+      const result = await this.client.claimAllResolvedHourly(settings.autoClaim.daysBack, enabledCryptos);
       
       if (result.success > 0) {
         logger.info(`✅ AUTO-CLAIM COMPLETE: ${result.success} position(s) claimed!`);
