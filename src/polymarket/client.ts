@@ -9,11 +9,12 @@ const CLOB_API_URL = 'https://clob.polymarket.com';
 const GAMMA_API_URL = 'https://gamma-api.polymarket.com';
 
 // Polygon RPC - try multiple endpoints with fallback
+// Ankr first (best rate limits), then others as fallback
 const POLYGON_RPCS = [
+  'https://rpc.ankr.com/polygon',
+  'https://polygon.blockpi.network/v1/rpc/public',
   'https://polygon-mainnet.public.blastapi.io',
-  'https://polygon-bor-rpc.publicnode.com', 
   'https://1rpc.io/matic',
-  'https://polygon.drpc.org',
 ];
 const USDC_E_ADDRESS = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'; // USDC.e (bridged) on Polygon
 const USDC_NATIVE_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Native USDC on Polygon
