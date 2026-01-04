@@ -147,7 +147,7 @@ export class SettingsManager {
   // Convenience getters for specific settings
   // ==========================================
 
-  getCryptoSettings(crypto: 'btc' | 'eth' | 'sol') {
+  getCryptoSettings(crypto: 'btc' | 'eth' | 'sol' | 'xrp') {
     return this.settings[crypto];
   }
 
@@ -165,6 +165,10 @@ export class SettingsManager {
 
   getAutoClaimSettings() {
     return this.settings.autoClaim;
+  }
+
+  getAutoSellSettings() {
+    return this.settings.autoSell;
   }
 
   getAdvancedSettings() {
@@ -185,4 +189,5 @@ export function getSettingsManager(): SettingsManager {
   }
   return instance;
 }
+
 

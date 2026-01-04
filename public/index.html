@@ -1057,6 +1057,79 @@
         </div>
       </div>
 
+      <!-- Auto-Sell -->
+      <div class="card">
+        <h2 class="card-title">Auto-Sell</h2>
+        <div class="form-sublabel" style="margin-bottom: 16px;">Automatically sell positions every hour at :01</div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Enable Auto-Sell</div>
+            <div class="form-sublabel">Runs independently of main bot</div>
+          </div>
+          <div id="settingsAutoSellToggle" class="toggle"></div>
+        </div>
+        <div class="card-subtitle" style="margin-top: 20px; margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Sell Mode (at least one required)</div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Sell All Positions</div>
+            <div class="form-sublabel">Sell regardless of profit or loss</div>
+          </div>
+          <div id="settingsAutoSellAllToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Sell In Profit Only</div>
+            <div class="form-sublabel">Only sell positions that are profitable</div>
+          </div>
+          <div id="settingsAutoSellProfitToggle" class="toggle"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">Sell In Loss Only</div>
+            <div class="form-sublabel">Only sell positions that are at a loss</div>
+          </div>
+          <div id="settingsAutoSellLossToggle" class="toggle"></div>
+        </div>
+        <div class="card-subtitle" style="margin-top: 20px; margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Per-Crypto Toggles</div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">BTC Auto-Sell</div>
+            <div class="form-sublabel">Include BTC positions</div>
+          </div>
+          <div id="settingsAutoSellBtcToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">ETH Auto-Sell</div>
+            <div class="form-sublabel">Include ETH positions</div>
+          </div>
+          <div id="settingsAutoSellEthToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">SOL Auto-Sell</div>
+            <div class="form-sublabel">Include SOL positions</div>
+          </div>
+          <div id="settingsAutoSellSolToggle" class="toggle on"></div>
+        </div>
+        <div class="form-row">
+          <div>
+            <div class="form-label">XRP Auto-Sell</div>
+            <div class="form-sublabel">Include XRP positions</div>
+          </div>
+          <div id="settingsAutoSellXrpToggle" class="toggle on"></div>
+        </div>
+        <div class="input-row" style="margin-top: 20px;">
+          <div class="field">
+            <label class="field-label">Run At Minute (0-59)</label>
+            <input type="number" id="settingsAutoSellMinute" class="field-input" value="1" min="0" max="59">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="triggerAutoSell()">Sell Now</button>
+        </div>
+      </div>
+
       <!-- Volatility Filter -->
       <div class="card">
         <h2 class="card-title">Volatility Filter</h2>
@@ -1530,6 +1603,21 @@
       setValue('settingsScanInterval', s.advanced.scanIntervalSeconds);
       setValue('settingsGasSpeed', s.advanced.gas.speed);
       setValue('settingsRpcUrl', s.advanced.rpcUrl || '');
+      
+      // Auto-Sell
+      if (s.autoSell) {
+        setToggle('settingsAutoSellToggle', s.autoSell.enabled);
+        setToggle('settingsAutoSellAllToggle', s.autoSell.sellAllPositions);
+        setToggle('settingsAutoSellProfitToggle', s.autoSell.sellInProfitOnly);
+        setToggle('settingsAutoSellLossToggle', s.autoSell.sellInLossOnly);
+        setValue('settingsAutoSellMinute', s.autoSell.runAtMinute);
+        if (s.autoSell.cryptoSettings) {
+          setToggle('settingsAutoSellBtcToggle', s.autoSell.cryptoSettings.BTC?.enabled);
+          setToggle('settingsAutoSellEthToggle', s.autoSell.cryptoSettings.ETH?.enabled);
+          setToggle('settingsAutoSellSolToggle', s.autoSell.cryptoSettings.SOL?.enabled);
+          setToggle('settingsAutoSellXrpToggle', s.autoSell.cryptoSettings.XRP?.enabled);
+        }
+      }
     }
     
     function setToggle(id, value) {
@@ -1561,7 +1649,12 @@
         'settingsSolClaimToggle', 'settingsXrpClaimToggle',
         'settingsStopLossToggle', 'settingsAutoClaimToggle',
         'settingsVolatilityToggle', 'settingsVolatileHoursToggle',
-        'settingsRealtimeToggle', 'settingsSpreadToggle'
+        'settingsRealtimeToggle', 'settingsSpreadToggle',
+        // Auto-Sell toggles
+        'settingsAutoSellToggle', 'settingsAutoSellAllToggle',
+        'settingsAutoSellProfitToggle', 'settingsAutoSellLossToggle',
+        'settingsAutoSellBtcToggle', 'settingsAutoSellEthToggle',
+        'settingsAutoSellSolToggle', 'settingsAutoSellXrpToggle'
       ];
       toggleIds.forEach(id => {
         const el = document.getElementById(id);
@@ -1628,6 +1721,19 @@
           rpcUrl: getValue('settingsRpcUrl', false),
           gas: {
             speed: getValue('settingsGasSpeed', false),
+          },
+        },
+        autoSell: {
+          enabled: getToggle('settingsAutoSellToggle'),
+          runAtMinute: getValue('settingsAutoSellMinute'),
+          sellAllPositions: getToggle('settingsAutoSellAllToggle'),
+          sellInProfitOnly: getToggle('settingsAutoSellProfitToggle'),
+          sellInLossOnly: getToggle('settingsAutoSellLossToggle'),
+          cryptoSettings: {
+            BTC: { enabled: getToggle('settingsAutoSellBtcToggle') },
+            ETH: { enabled: getToggle('settingsAutoSellEthToggle') },
+            SOL: { enabled: getToggle('settingsAutoSellSolToggle') },
+            XRP: { enabled: getToggle('settingsAutoSellXrpToggle') },
           },
         },
       };
@@ -1704,6 +1810,16 @@
         const { data } = await apiCall('/stoploss/check', 'POST');
         toast(`Checked ${data.checked} positions, sold ${data.sold}`);
       } catch (e) { toast('Check failed', true); }
+    }
+
+    // Auto-Sell (manual trigger)
+    async function triggerAutoSell() {
+      if (!confirm('SELL NOW: This will sell all positions according to your auto-sell settings. Continue?')) return;
+      try {
+        toast('Selling positions...');
+        await apiCall('/autosell/trigger', 'POST');
+        toast('Auto-sell started. Check logs for progress.');
+      } catch (e) { toast('Auto-sell failed', true); }
     }
 
     setInterval(() => { if (isConnected) fetchStats(); }, 30000);

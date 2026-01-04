@@ -1111,6 +1111,41 @@ export function createServer(
   });
 
   // ==========================================
+  // AUTO-SELL ENDPOINTS
+  // ==========================================
+
+  // Get auto-sell status and settings
+  app.get('/api/autosell/status', (req: Request, res: Response) => {
+    try {
+      const status = scheduler.getAutoSellStatus();
+      res.json({ success: true, data: status });
+    } catch (error: any) {
+      logger.error('Failed to get auto-sell status', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to get status' });
+    }
+  });
+
+  // Manually trigger auto-sell
+  app.post('/api/autosell/trigger', async (req: Request, res: Response) => {
+    try {
+      logger.info('Manual auto-sell triggered via API');
+      
+      // Run in background
+      scheduler.triggerAutoSell()
+        .then(() => logger.info('✅ Manual auto-sell complete'))
+        .catch((err: any) => logger.error('❌ Manual auto-sell failed:', err.message || err));
+      
+      res.json({ 
+        success: true, 
+        message: 'Auto-sell triggered! Check logs for progress.' 
+      });
+    } catch (error: any) {
+      logger.error('Failed to trigger auto-sell', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to trigger' });
+    }
+  });
+
+  // ==========================================
   // UNIFIED SETTINGS ENDPOINTS
   // ==========================================
 

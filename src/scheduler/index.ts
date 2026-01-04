@@ -31,10 +31,13 @@ export interface LiveMarketData {
 export class TradingScheduler {
   private cronJob: cron.ScheduledTask | null = null;
   private claimJob: cron.ScheduledTask | null = null;
+  private autoSellJob: cron.ScheduledTask | null = null;
   private isRunning = false;
   private isClaimRunning = false;
+  private isAutoSellRunning = false;
   private lastScanTime: Date | null = null;
   private lastClaimTime: Date | null = null;
+  private lastAutoSellTime: Date | null = null;
   private lastApiCallTime: Date | null = null;
   
   // Minimum time between API calls to avoid rate limiting (5 seconds)
@@ -412,6 +415,14 @@ export class TradingScheduler {
     });
     logger.info('Auto-claim scheduler started (every 15 minutes)');
 
+    // Start auto-sell job (runs at :01 of every hour by default)
+    const settings = getSettingsManager().getAll();
+    const autoSellMinute = settings.autoSell.runAtMinute;
+    this.autoSellJob = cron.schedule(`0 ${autoSellMinute} * * * *`, async () => {
+      await this.runAutoSell();
+    });
+    logger.info(`Auto-sell scheduler started (runs at :${autoSellMinute.toString().padStart(2, '0')} every hour)`);
+
     // Run an initial scan immediately
     this.runScan();
   }
@@ -429,6 +440,11 @@ export class TradingScheduler {
       this.claimJob.stop();
       this.claimJob = null;
       logger.info('Auto-claim scheduler stopped');
+    }
+    if (this.autoSellJob) {
+      this.autoSellJob.stop();
+      this.autoSellJob = null;
+      logger.info('Auto-sell scheduler stopped');
     }
   }
 
@@ -512,6 +528,164 @@ export class TradingScheduler {
       enabled: this.autoClaimEnabled,
       lastClaimTime: this.lastClaimTime?.toISOString() || null,
     };
+  }
+
+  // ==========================================
+  // AUTO-SELL FUNCTIONS
+  // ==========================================
+
+  /**
+   * Run auto-sell: sell all open positions at market price
+   * Runs every hour at :01 (configurable)
+   * Does NOT respect trading window or main bot enabled status
+   */
+  async runAutoSell(): Promise<void> {
+    if (this.isAutoSellRunning) {
+      logger.debug('Auto-sell already in progress, skipping...');
+      return;
+    }
+
+    const settings = getSettingsManager().getAll();
+    
+    if (!settings.autoSell.enabled) {
+      logger.debug('Auto-sell disabled, skipping...');
+      return;
+    }
+
+    if (this.client.isReadOnly()) {
+      logger.debug('Auto-sell skipped: read-only mode');
+      return;
+    }
+
+    this.isAutoSellRunning = true;
+    this.lastAutoSellTime = new Date();
+    logger.info('=== STARTING AUTO-SELL ===');
+    logger.info(`Mode: sellAll=${settings.autoSell.sellAllPositions}, profitOnly=${settings.autoSell.sellInProfitOnly}, lossOnly=${settings.autoSell.sellInLossOnly}`);
+
+    try {
+      // Get all open positions
+      const positions = await this.client.getPositions();
+      const openPositions = positions.filter((p: any) => {
+        const size = parseFloat(p.size || p.amount || p.shares || '0');
+        return size > 0.001 && !p.resolved && !p.closed;
+      });
+
+      if (openPositions.length === 0) {
+        logger.info('No open positions to sell');
+        this.isAutoSellRunning = false;
+        return;
+      }
+
+      logger.info(`Found ${openPositions.length} open position(s) to evaluate`);
+
+      let soldCount = 0;
+      let skippedCount = 0;
+
+      for (const position of openPositions) {
+        const tokenId = position.asset || position.tokenId;
+        const size = parseFloat(position.size || position.amount || position.shares || '0');
+        const currentPrice = parseFloat(position.curPrice || position.currentPrice || position.price || '0');
+        const avgPrice = parseFloat(position.avgPrice || position.averagePrice || position.buyAvgPrice || '0');
+        const title = position.title || position.market?.question || tokenId?.substring(0, 20) || 'Unknown';
+
+        if (!tokenId || size <= 0) {
+          continue;
+        }
+
+        // Determine crypto from title (best effort)
+        let crypto: string | null = null;
+        const titleUpper = title.toUpperCase();
+        if (titleUpper.includes('BITCOIN') || titleUpper.includes('BTC')) crypto = 'BTC';
+        else if (titleUpper.includes('ETHEREUM') || titleUpper.includes('ETH')) crypto = 'ETH';
+        else if (titleUpper.includes('SOLANA') || titleUpper.includes('SOL')) crypto = 'SOL';
+        else if (titleUpper.includes('XRP') || titleUpper.includes('RIPPLE')) crypto = 'XRP';
+
+        // Check if crypto is enabled for auto-sell
+        if (crypto) {
+          const cryptoKey = crypto as keyof typeof settings.autoSell.cryptoSettings;
+          if (!settings.autoSell.cryptoSettings[cryptoKey]?.enabled) {
+            logger.debug(`⏭️ Skipping ${title}: ${crypto} auto-sell disabled`);
+            skippedCount++;
+            continue;
+          }
+        }
+
+        // Determine P&L
+        const isProfit = avgPrice > 0 ? currentPrice >= avgPrice : true;
+        const isLoss = avgPrice > 0 ? currentPrice < avgPrice : false;
+
+        // Apply sell mode filters
+        let shouldSell = false;
+
+        if (settings.autoSell.sellAllPositions) {
+          shouldSell = true;
+        }
+        if (settings.autoSell.sellInProfitOnly && isProfit) {
+          shouldSell = true;
+        }
+        if (settings.autoSell.sellInLossOnly && isLoss) {
+          shouldSell = true;
+        }
+
+        if (!shouldSell) {
+          logger.debug(`⏭️ Skipping ${title}: doesn't match sell mode criteria`);
+          skippedCount++;
+          continue;
+        }
+
+        // Execute sell at market price
+        try {
+          logger.info(`💰 AUTO-SELL: ${title}`);
+          logger.info(`   Size: ${size.toFixed(2)} shares @ ${(currentPrice * 100).toFixed(1)}¢`);
+          
+          const result = await this.client.placeSellOrder(tokenId, size, true);
+          soldCount++;
+          
+          logger.info(`✅ SOLD: ${title}`);
+          logger.debug(`   Result: ${JSON.stringify(result)}`);
+
+          // Small delay between sells
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (sellError: any) {
+          logger.error(`❌ Auto-sell FAILED for ${title}: ${sellError.message}`);
+        }
+      }
+
+      logger.info(`=== AUTO-SELL COMPLETE: ${soldCount} sold, ${skippedCount} skipped ===`);
+
+    } catch (error: any) {
+      logger.error(`Auto-sell failed: ${error.message}`);
+    } finally {
+      this.isAutoSellRunning = false;
+    }
+  }
+
+  /**
+   * Get auto-sell status
+   */
+  getAutoSellStatus(): { enabled: boolean; lastAutoSellTime: string | null; settings: any } {
+    const settings = getSettingsManager().getAll();
+    return {
+      enabled: settings.autoSell.enabled,
+      lastAutoSellTime: this.lastAutoSellTime?.toISOString() || null,
+      settings: settings.autoSell,
+    };
+  }
+
+  /**
+   * Manually trigger auto-sell
+   */
+  async triggerAutoSell(): Promise<{ sold: number; skipped: number }> {
+    const prevEnabled = getSettingsManager().getAll().autoSell.enabled;
+    // Temporarily enable to run
+    getSettingsManager().update({ autoSell: { ...getSettingsManager().getAll().autoSell, enabled: true } });
+    
+    await this.runAutoSell();
+    
+    // Restore previous state
+    getSettingsManager().update({ autoSell: { ...getSettingsManager().getAll().autoSell, enabled: prevEnabled } });
+    
+    return { sold: 0, skipped: 0 }; // Actual counts logged in runAutoSell
   }
 
   /**
@@ -788,18 +962,23 @@ export class TradingScheduler {
     schedulerActive: boolean;
     autoClaimEnabled: boolean;
     lastClaimTime: string | null;
+    autoSellEnabled: boolean;
+    lastAutoSellTime: string | null;
     inTradingWindow: boolean;
     tradingWindowStart: number;
     tradingWindowEnd: number;
     currentMinute: number;
     minutesUntilWindow: number;
   } {
+    const settings = getSettingsManager().getAll();
     return {
       isRunning: this.isRunning,
       lastScanTime: this.lastScanTime?.toISOString() || null,
       schedulerActive: this.cronJob !== null,
       autoClaimEnabled: this.autoClaimEnabled,
       lastClaimTime: this.lastClaimTime?.toISOString() || null,
+      autoSellEnabled: settings.autoSell.enabled,
+      lastAutoSellTime: this.lastAutoSellTime?.toISOString() || null,
       inTradingWindow: this.isInTradingWindow(),
       tradingWindowStart: this.tradingWindowStart,
       tradingWindowEnd: this.tradingWindowEnd,
